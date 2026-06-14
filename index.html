@@ -196,6 +196,26 @@ footer{background:var(--dark);text-align:center;padding:36px 20px;border-top:1px
 .back-btn:hover{color:var(--dark);}
 .back-btn::before{content:'←';font-size:14px;}
 
+/* owner-only elements hidden by default */
+.owner-only{display:none!important;}
+body.is-owner .owner-only{display:block!important;}
+body.is-owner label.owner-only{display:flex!important;}
+
+/* lock button in nav */
+.lock-btn{background:none;border:0.5px solid rgba(255,255,255,0.15)!important;color:var(--warm)!important;padding:4px 10px!important;letter-spacing:1px!important;font-size:13px!important;cursor:pointer;transition:border-color 0.2s;}
+.lock-btn:hover{border-color:var(--gold)!important;color:var(--gold)!important;}
+
+/* password modal */
+.pw-modal{display:none;position:fixed;inset:0;background:rgba(20,14,10,0.92);z-index:9999;align-items:center;justify-content:center;}
+.pw-modal.open{display:flex;}
+.pw-box{background:var(--cream);padding:40px 36px;max-width:340px;width:90%;text-align:center;}
+.pw-box h2{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--dark);margin-bottom:8px;}
+.pw-box p{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--warm);margin-bottom:24px;}
+.pw-box input{width:100%;border:0.5px solid var(--border);background:var(--light);padding:11px 14px;font-family:'Lato',sans-serif;font-size:15px;color:var(--dark);outline:none;text-align:center;letter-spacing:3px;margin-bottom:14px;}
+.pw-box button{width:100%;background:var(--dark);color:var(--cream);border:none;padding:12px;cursor:pointer;font-family:'Lato',sans-serif;font-size:10px;letter-spacing:3px;text-transform:uppercase;}
+.pw-box button:hover{background:#3d2f22;}
+.pw-error{font-size:11px;color:#c0392b;margin-top:8px;display:none;}
+
 @media(max-width:600px){
   nav{padding:0 16px;}
   .cats-row{gap:28px;}
@@ -215,6 +235,7 @@ footer{background:var(--dark);text-align:center;padding:36px 20px;border-top:1px
     <button onclick="showPage('gallery')" id="nav-gallery" data-zh="相册" data-en="Gallery">相册</button>
     <button onclick="showPage('videos')" id="nav-videos" data-zh="视频" data-en="Videos">视频</button>
     <button class="lang-toggle" onclick="toggleLang()" id="lang-btn">EN</button>
+    <button class="lock-btn" onclick="openPwModal()" id="lock-btn" title="Owner login">🔒</button>
   </div>
 </nav>
 
@@ -277,7 +298,7 @@ footer{background:var(--dark);text-align:center;padding:36px 20px;border-top:1px
           <div class="gallery-caption">Talkie</div>
         </div>
       </div>
-      <label class="upload-zone" for="talkie-upload">
+      <label class="upload-zone owner-only" for="talkie-upload">
         <p data-zh="点击上传更多照片" data-en="Upload more photos">点击上传更多照片</p>
         <span>JPG · PNG</span>
         <input type="file" id="talkie-upload" accept="image/*" multiple onchange="addPhotos(event,'talkie-gallery-grid')">
@@ -286,7 +307,7 @@ footer{background:var(--dark);text-align:center;padding:36px 20px;border-top:1px
   </div>
   <div id="talkie-diary" class="tab-content">
     <section class="diary-section">
-      <button class="diary-new-btn" onclick="toggleForm('talkie-form','talkie-form-btn')" id="talkie-form-btn" data-zh="+ 写新日记" data-en="+ New Entry">+ 写新日记</button>
+      <button class="diary-new-btn owner-only" onclick="toggleForm('talkie-form','talkie-form-btn')" id="talkie-form-btn" data-zh="+ 写新日记" data-en="+ New Entry">+ 写新日记</button>
       <div class="diary-form" id="talkie-form">
         <label data-zh="日期" data-en="Date">日期</label>
         <input type="date" id="talkie-date">
@@ -328,7 +349,7 @@ footer{background:var(--dark);text-align:center;padding:36px 20px;border-top:1px
           <div class="gallery-caption" data-zh="薯条" data-en="French Fry">薯条</div>
         </div>
       </div>
-      <label class="upload-zone" for="shuciao-upload">
+      <label class="upload-zone owner-only" for="shuciao-upload">
         <p data-zh="点击上传更多照片" data-en="Upload more photos">点击上传更多照片</p>
         <span>JPG · PNG</span>
         <input type="file" id="shuciao-upload" accept="image/*" multiple onchange="addPhotos(event,'shuciao-gallery-grid')">
@@ -337,7 +358,7 @@ footer{background:var(--dark);text-align:center;padding:36px 20px;border-top:1px
   </div>
   <div id="shuciao-diary" class="tab-content">
     <section class="diary-section">
-      <button class="diary-new-btn" onclick="toggleForm('shuciao-form','shuciao-form-btn')" id="shuciao-form-btn" data-zh="+ 写新日记" data-en="+ New Entry">+ 写新日记</button>
+      <button class="diary-new-btn owner-only" onclick="toggleForm('shuciao-form','shuciao-form-btn')" id="shuciao-form-btn" data-zh="+ 写新日记" data-en="+ New Entry">+ 写新日记</button>
       <div class="diary-form" id="shuciao-form">
         <label data-zh="日期" data-en="Date">日期</label>
         <input type="date" id="shuciao-date">
@@ -379,7 +400,7 @@ footer{background:var(--dark);text-align:center;padding:36px 20px;border-top:1px
           <div class="gallery-caption">Tummy</div>
         </div>
       </div>
-      <label class="upload-zone" for="tummy-upload">
+      <label class="upload-zone owner-only" for="tummy-upload">
         <p data-zh="点击上传更多照片" data-en="Upload more photos">点击上传更多照片</p>
         <span>JPG · PNG</span>
         <input type="file" id="tummy-upload" accept="image/*" multiple onchange="addPhotos(event,'tummy-gallery-grid')">
@@ -388,7 +409,7 @@ footer{background:var(--dark);text-align:center;padding:36px 20px;border-top:1px
   </div>
   <div id="tummy-diary" class="tab-content">
     <section class="diary-section">
-      <button class="diary-new-btn" onclick="toggleForm('tummy-form','tummy-form-btn')" id="tummy-form-btn" data-zh="+ 写新日记" data-en="+ New Entry">+ 写新日记</button>
+      <button class="diary-new-btn owner-only" onclick="toggleForm('tummy-form','tummy-form-btn')" id="tummy-form-btn" data-zh="+ 写新日记" data-en="+ New Entry">+ 写新日记</button>
       <div class="diary-form" id="tummy-form">
         <label data-zh="日期" data-en="Date">日期</label>
         <input type="date" id="tummy-date">
@@ -444,7 +465,7 @@ footer{background:var(--dark);text-align:center;padding:36px 20px;border-top:1px
         <div class="gallery-caption">Tummy</div>
       </div>
     </div>
-    <label class="upload-zone" for="main-upload">
+    <label class="upload-zone owner-only" for="main-upload">
       <p data-zh="点击上传更多照片" data-en="Upload more photos">点击上传更多照片</p>
       <span>JPG · PNG</span>
       <input type="file" id="main-upload" accept="image/*" multiple onchange="addPhotos(event,'main-gallery-grid')">
@@ -460,7 +481,7 @@ footer{background:var(--dark);text-align:center;padding:36px 20px;border-top:1px
   </header>
   <section class="video-section">
     <div class="video-grid" id="video-grid">
-      <label class="video-upload-card" for="video-upload">
+      <label class="video-upload-card owner-only" for="video-upload">
         <div class="play-icon"></div>
         <p data-zh="上传视频" data-en="Upload a video">上传视频</p>
         <span>MP4 · MOV · WebM</span>
@@ -474,6 +495,17 @@ footer{background:var(--dark);text-align:center;padding:36px 20px;border-top:1px
   <div class="footer-logo">jojo's cats</div>
   <p class="footer-text">Talkie &nbsp;·&nbsp; <span data-zh="薯条" data-en="French Fry">薯条</span> &nbsp;·&nbsp; Tummy</p>
 </footer>
+
+<!-- PASSWORD MODAL -->
+<div class="pw-modal" id="pw-modal">
+  <div class="pw-box">
+    <h2>jojo's cats</h2>
+    <p data-zh="请输入密码" data-en="Enter password">请输入密码</p>
+    <input type="password" id="pw-input" placeholder="••••••••" onkeydown="if(event.key==='Enter')checkPw()">
+    <button onclick="checkPw()" data-zh="进入" data-en="Enter">进入</button>
+    <div class="pw-error" id="pw-error" data-zh="密码错误，请重试" data-en="Wrong password, try again">密码错误，请重试</div>
+  </div>
+</div>
 
 <!-- LIGHTBOX -->
 <div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
@@ -598,7 +630,38 @@ function saveDiary(cat){
   [cat+'-date',cat+'-title-zh',cat+'-title-en',cat+'-body-zh',cat+'-body-en'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
 }
 
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLightbox();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeLightbox();closePwModal();}});
+
+const PW='jojotalkie';
+
+function openPwModal(){
+  if(document.body.classList.contains('is-owner')){
+    document.body.classList.remove('is-owner');
+    document.getElementById('lock-btn').textContent='🔒';
+    return;
+  }
+  document.getElementById('pw-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('pw-input').focus(),100);
+}
+
+function closePwModal(){
+  document.getElementById('pw-modal').classList.remove('open');
+  document.getElementById('pw-input').value='';
+  document.getElementById('pw-error').style.display='none';
+}
+
+function checkPw(){
+  const val=document.getElementById('pw-input').value;
+  if(val===PW){
+    document.body.classList.add('is-owner');
+    document.getElementById('lock-btn').textContent='🔓';
+    closePwModal();
+  } else {
+    document.getElementById('pw-error').style.display='block';
+    document.getElementById('pw-input').value='';
+    document.getElementById('pw-input').focus();
+  }
+}
 </script>
 </body>
 </html>
