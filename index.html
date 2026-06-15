@@ -530,8 +530,6 @@ function showCatPage(cat){
   showPage(cat);
   document.querySelectorAll('.nav-links button[id^="nav-"]').forEach(b=>b.classList.remove('active'));
 }
-fetchAndRenderDiaries(catId);
-fetchAndRenderGallery(catId);
 
 function switchTab(cat,tab,btn){
   document.querySelectorAll('#page-'+cat+' .tab-content').forEach(t=>t.classList.remove('active'));
@@ -569,69 +567,23 @@ function closeLightbox(e){
     document.getElementById('lightbox').classList.remove('open');
 }
 
-async function addPhoto(event, cat) {
-  // 安全检查：如果未登录主人身份，拦截上传
-  if (!document.body.classList.contains('is-owner')) {
-    alert('请先点击右上角 🔒 输入密码验证身份');
-    event.target.value = '';
-    return;
-  }
-
-  const file = event.target.files[0];
-  if (!file) return;
-
-  // 构造云端存储路径：例如 talkie/1712345678900.jpg
-  const fileExt = file.name.split('.').pop();
-  const fileName = `${Date.now()}.${fileExt}`;
-  const filePath = `${cat}/${fileName}`;
-
-  // 开始上传到你创建的名为 cat-photos 的 bucket 中
-  const { error } = await supabase.storage.from('cat-photos').upload(filePath, file);
-
-  if (error) {
-    alert('照片上传云端失败: ' + error.message);
-    return;
-  }
-
-  // 上传成功后，立刻重新刷新相册显示
-  await fetchAndRenderGallery(cat);
-}
-async function fetchAndRenderGallery(cat) {
-  const grid = document.getElementById(cat + '-grid');
-  if (!grid) return;
-
-  grid.innerHTML = '<p style="color:var(--warm); padding: 20px 0;">Loading photos...</p>';
-
-  // 从存储桶里列出当前猫咪文件夹下的所有文件
-  const { data, error } = await supabase.storage.from('cat-photos').list(cat);
-
-  if (error) {
-    grid.innerHTML = '<p style="color:red;">加载照片失败: ' + error.message + '</p>';
-    return;
-  }
-
-  if (!data || data.length === 0) {
-    grid.innerHTML = '<div class="empty-state" data-zh="暂无照片" data-en="No photos yet.">暂无照片</div>';
-    return;
-  }
-
-  grid.innerHTML = '';
-  // 按上传时间倒序排列
-  data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-  // 循环把每张照片渲染出来
-  data.forEach(file => {
-    // 获取照片的公开公网链接
-    const { data: urlData } = supabase.storage.from('cat-photos').getPublicUrl(`${cat}/${file.name}`);
-    const imgUrl = urlData.publicUrl;
-
-    const item = document.createElement('div');
-    item.className = 'gallery-item';
-    item.onclick = () => openLightbox(imgUrl, cat);
-    item.innerHTML = `<img src="${imgUrl}" alt="${cat}">`;
-    grid.appendChild(item);
+function addPhotos(e,gridId){
+  const files=Array.from(e.target.files);
+  const grid=document.getElementById(gridId);
+  files.forEach(file=>{
+    const reader=new FileReader();
+    reader.onload=function(ev){
+      const div=document.createElement('div');
+      div.className='gallery-item';
+      div.dataset.cat='all';
+      div.onclick=function(){openLightbox(this);};
+      div.innerHTML='<img src="'+ev.target.result+'" alt="cat"><div class="gallery-caption">'+file.name.replace(/\.[^.]+$/,'')+'</div>';
+      grid.appendChild(div);
+    };
+    reader.readAsDataURL(file);
   });
 }
+
 function addVideo(e){
   const file=e.target.files[0];
   if(!file)return;
@@ -654,97 +606,33 @@ function toggleForm(formId,btnId){
   if(isOpen){document.getElementById(formId.replace('-form','-date')).value=new Date().toISOString().slice(0,10);}
 }
 
-fasync function saveDiary(cat) {
-  // 1. 安全检查：如果不是主人登录状态，直接拦截
-  if (!document.body.classList.contains('is-owner')) {
-    alert('请先点击右上角 🔒 输入密码验证身份');
-    return;
-  }
-
-  // 2. 拿到输入框里的内容
-  const date = document.getElementById(cat + '-date').value;
-  const titleZh = document.getElementById(cat + '-title-zh').value;
-  const titleEn = document.getElementById(cat + '-title-en').value;
-  const bodyZh = document.getElementById(cat + '-body-zh').value;
-  const bodyEn = document.getElementById(cat + '-body-en').value;
-
-  if (!date || (!bodyZh && !bodyEn)) {
-    alert('请填写日期和正文内容');
-    return;
-  }
-
-  // 3. 把数据打包，发送到 Supabase 数据库
-  const { error } = await supabase
-    .from('cat_diaries') // 确保这行名字和你建的表格名字一模一样
-    .insert([
-      {
-        cat: cat,
-        date: date,
-        title_zh: titleZh,
-        title_en: titleEn,
-        body_zh: bodyZh,
-        body_en: bodyEn
-      }
-    ]);
-
-  if (error) {
-    alert('保存到云端失败: ' + error.message);
-    return;
-  }
-
-  // 4. 保存成功后，清空并隐藏输入框
-  toggleForm(cat + '-form', cat + '-form-btn');
-  [cat + '-date', cat + '-title-zh', cat + '-title-en', cat + '-body-zh', cat + '-body-en'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-
-  // 5. 重新刷新列表，显示最新日记
-  await fetchAndRenderDiaries(cat);
+function saveDiary(cat){
+  const date=document.getElementById(cat+'-date').value;
+  const titleZh=document.getElementById(cat+'-title-zh').value.trim();
+  const titleEn=document.getElementById(cat+'-title-en').value.trim();
+  const bodyZh=document.getElementById(cat+'-body-zh').value.trim();
+  const bodyEn=document.getElementById(cat+'-body-en').value.trim();
+  if(!titleZh&&!titleEn)return;
+  const d=new Date(date);
+  const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const dateStr=date.replace(/-/g,'/').replace(/(\d{4})\/(\d{2})\/(\d{2})/,'年月日')+' · '+days[d.getDay()];
+  const art=document.createElement('article');
+  art.className='diary-entry';
+  art.innerHTML='<p class="diary-date">'+dateStr+'</p>'+
+    '<h2 class="diary-title" data-zh="'+titleZh+'" data-en="'+titleEn+'">'+(lang==='zh'?titleZh:titleEn)+'</h2>'+
+    '<p class="diary-body" data-zh="'+bodyZh+'" data-en="'+bodyEn+'">'+(lang==='zh'?bodyZh:bodyEn)+'</p>'+
+    (bodyEn?'<p class="diary-body-en">'+(lang==='zh'?bodyEn:bodyZh)+'</p>':'');
+  const entries=document.getElementById(cat+'-entries');
+  const empty=entries.querySelector('.empty-state');
+  if(empty)empty.remove();
+  entries.insertBefore(art,entries.firstChild);
+  toggleForm(cat+'-form',cat+'-form-btn');
+  [cat+'-date',cat+'-title-zh',cat+'-title-en',cat+'-body-zh',cat+'-body-en'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
 }
-async function fetchAndRenderDiaries(cat) {
-  const entries = document.getElementById(cat + '-entries');
-  if (!entries) return;
 
-  entries.innerHTML = '<p style="color:var(--warm); padding: 20px 0;">Loading diaries...</p>';
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeLightbox();closePwModal();}});
 
-  // 1. 从云端数据库拿取对应小猫的日记，并按日期倒序排列
-  const { data, error } = await supabase
-    .from('cat_diaries')
-    .select('*')
-    .eq('cat', cat)
-    .order('date', { ascending: false });
-
-  if (error) {
-    entries.innerHTML = '<p style="color:red;">加载日记失败: ' + error.message + '</p>';
-    return;
-  }
-
-  // 2. 如果没有日记，显示暂无手记
-  if (!data || data.length === 0) {
-    entries.innerHTML = '<div class="empty-state" data-zh="暂无手记" data-en="No entries yet.">暂无手记</div>';
-    return;
-  }
-
-  // 3. 循环把每一条日记画到网页上
-  entries.innerHTML = '';
-  data.forEach(entry => {
-    const art = document.createElement('article');
-    art.className = 'diary-entry';
-
-    const title = lang === 'zh' ? (entry.title_zh || entry.title_en) : (entry.title_en || entry.title_zh);
-    const body = lang === 'zh' ? entry.body_zh : entry.body_en;
-    const secondaryBody = lang === 'zh' ? entry.body_en : entry.body_zh;
-
-    art.innerHTML = `
-      <div class="diary-date">${entry.date}</div>
-      <h3 class="diary-title">${title || ''}</h3>
-      <p class="diary-body">${body || ''}</p>
-      ${secondaryBody ? `<p class="diary-body-en">${secondaryBody}</p>` : ''}
-    `;
-    entries.appendChild(art);
-  });
-}
+const PW='jojotalkie';
 
 function openPwModal(){
   if(document.body.classList.contains('is-owner')){
@@ -774,14 +662,6 @@ function checkPw(){
     document.getElementById('pw-input').focus();
   }
 }
-</script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<script>
-  // 2. 把你的钥匙插进去，初始化连接
-  const SUPABASE_URL = 'https://tyvsibozgmkhlskyeyci.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5dnNpYm96Z21raGxza3lleWNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0OTYwNDgsImV4cCI6MjA5NzA3MjA0OH0.69ILghn5CKLxCISYREaZBH7RcYQ12S-_2LEb7K-stFY';
-  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 </script>
 </body>
 </html>
