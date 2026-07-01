@@ -140,6 +140,8 @@ body.is-owner .milestone-delete{display:inline-block;}
 .milestone-icon-select{display:flex;gap:8px;flex-wrap:wrap;padding:6px 0;}
 .milestone-icon-select button{background:none;border:1px solid var(--border);border-radius:4px;font-size:22px;padding:4px 10px;cursor:pointer;transition:all 0.2s;}
 .milestone-icon-select button:hover,.milestone-icon-select button.active{border-color:var(--gold);background:rgba(193,127,59,0.08);}
+.milestone-image-preview{display:none;margin-top:8px;}
+.milestone-image-preview img{max-width:100%;max-height:150px;border-radius:4px;border:0.5px solid var(--border);}
 
 /* COMMENTS */
 .comments-section{max-width:700px;margin:0 auto;padding:0 28px 70px;}
@@ -327,6 +329,9 @@ footer{background:var(--dark);text-align:center;padding:36px 20px;}
         <input type="hidden" id="talkie-milestone-icon" value="✨">
         <label data-zh="标题" data-en="Title">标题</label><input type="text" id="talkie-milestone-title" placeholder="发生了什么重要的事…">
         <label data-zh="描述（可选）" data-en="Description (optional)">描述（可选）</label><textarea id="talkie-milestone-desc" placeholder="详细说说…"></textarea>
+        <label data-zh="图片（可选）" data-en="Image (optional)">图片（可选）</label>
+        <input type="file" accept="image/*" id="talkie-milestone-image" onchange="previewMilestoneImage('talkie')">
+        <div class="milestone-image-preview" id="talkie-milestone-preview"><img id="talkie-milestone-preview-img" alt="预览"></div>
         <div class="milestone-form-actions">
           <button class="btn-save" onclick="saveMilestone('talkie')" data-zh="保存" data-en="Save">保存</button>
           <button class="btn-cancel" onclick="toggleMilestoneForm('talkie')" data-zh="取消" data-en="Cancel">取消</button>
@@ -397,6 +402,9 @@ footer{background:var(--dark);text-align:center;padding:36px 20px;}
         <input type="hidden" id="shuciao-milestone-icon" value="✨">
         <label data-zh="标题" data-en="Title">标题</label><input type="text" id="shuciao-milestone-title" placeholder="发生了什么重要的事…">
         <label data-zh="描述（可选）" data-en="Description (optional)">描述（可选）</label><textarea id="shuciao-milestone-desc" placeholder="详细说说…"></textarea>
+        <label data-zh="图片（可选）" data-en="Image (optional)">图片（可选）</label>
+        <input type="file" accept="image/*" id="shuciao-milestone-image" onchange="previewMilestoneImage('shuciao')">
+        <div class="milestone-image-preview" id="shuciao-milestone-preview"><img id="shuciao-milestone-preview-img" alt="预览"></div>
         <div class="milestone-form-actions">
           <button class="btn-save" onclick="saveMilestone('shuciao')" data-zh="保存" data-en="Save">保存</button>
           <button class="btn-cancel" onclick="toggleMilestoneForm('shuciao')" data-zh="取消" data-en="Cancel">取消</button>
@@ -467,6 +475,9 @@ footer{background:var(--dark);text-align:center;padding:36px 20px;}
         <input type="hidden" id="tummy-milestone-icon" value="✨">
         <label data-zh="标题" data-en="Title">标题</label><input type="text" id="tummy-milestone-title" placeholder="发生了什么重要的事…">
         <label data-zh="描述（可选）" data-en="Description (optional)">描述（可选）</label><textarea id="tummy-milestone-desc" placeholder="详细说说…"></textarea>
+        <label data-zh="图片（可选）" data-en="Image (optional)">图片（可选）</label>
+        <input type="file" accept="image/*" id="tummy-milestone-image" onchange="previewMilestoneImage('tummy')">
+        <div class="milestone-image-preview" id="tummy-milestone-preview"><img id="tummy-milestone-preview-img" alt="预览"></div>
         <div class="milestone-form-actions">
           <button class="btn-save" onclick="saveMilestone('tummy')" data-zh="保存" data-en="Save">保存</button>
           <button class="btn-cancel" onclick="toggleMilestoneForm('tummy')" data-zh="取消" data-en="Cancel">取消</button>
@@ -856,10 +867,15 @@ function makeMilestoneCard(m){
   div.className='milestone-card';
   div.dataset.id=m.id;
   const dateStr=m.date.replace(/-/g,'年').replace(/年(\d+)年(\d+)$/,'年月日');
+  let imgHtml='';
+  if(m.image_url){
+    imgHtml='<div style="margin-top:8px;"><img src="'+m.image_url+'" style="max-width:100%;max-height:200px;border-radius:4px;border:0.5px solid var(--border);object-fit:cover;"></div>';
+  }
   div.innerHTML='<span class="milestone-icon">'+(m.icon||'✨')+'</span>'+
     '<div class="milestone-date">'+dateStr+'</div>'+
     '<div class="milestone-title">'+m.title+'</div>'+
     (m.description?'<div class="milestone-desc">'+m.description+'</div>':'')+
+    imgHtml+
     '<button class="milestone-delete" onclick="deleteMilestone(event,'+m.id+')">× '+(lang==='zh'?'删除':'Delete')+'</button>';
   return div;
 }
@@ -891,6 +907,12 @@ function toggleMilestoneForm(cat){
     document.querySelectorAll('#'+cat+'-milestone-icons button').forEach(b=>b.classList.remove('active'));
     const firstIcon=document.querySelector('#'+cat+'-milestone-icons button');
     if(firstIcon){firstIcon.classList.add('active');document.getElementById(cat+'-milestone-icon').value=firstIcon.dataset.icon;}
+  }else{
+    // 关闭表单时重置图片预览
+    const preview=document.getElementById(cat+'-milestone-preview');
+    if(preview)preview.style.display='none';
+    const input=document.getElementById(cat+'-milestone-image');
+    if(input)input.value='';
   }
 }
 
@@ -901,18 +923,53 @@ function selectIcon(cat,icon){
   document.getElementById(cat+'-milestone-icon').value=icon;
 }
 
+function previewMilestoneImage(cat){
+  const input=document.getElementById(cat+'-milestone-image');
+  const preview=document.getElementById(cat+'-milestone-preview');
+  const img=document.getElementById(cat+'-milestone-preview-img');
+  if(input.files&&input.files[0]){
+    const reader=new FileReader();
+    reader.onload=function(e){
+      img.src=e.target.result;
+      preview.style.display='block';
+    };
+    reader.readAsDataURL(input.files[0]);
+  }else{
+    preview.style.display='none';
+  }
+}
+
 async function saveMilestone(cat){
   const date=document.getElementById(cat+'-milestone-date').value;
   const icon=document.getElementById(cat+'-milestone-icon').value||'✨';
   const title=document.getElementById(cat+'-milestone-title').value.trim();
   const description=document.getElementById(cat+'-milestone-desc').value.trim();
+  const fileInput=document.getElementById(cat+'-milestone-image');
+  const file=fileInput?.files?.[0];
+
   if(!title){showToast(lang==='zh'?'请填写标题':'Please enter a title');return;}
   if(!date){showToast(lang==='zh'?'请选择日期':'Please select a date');return;}
-  await dbInsert('milestones',{cat,date,icon,title,description});
+
+  let imageUrl='';
+  if(file){
+    try{
+      const path='milestones/'+cat+'/'+Date.now()+'-'+file.name.replace(/\s/g,'_');
+      imageUrl=await storageUpload(file,path);
+    }catch(e){
+      showToast(lang==='zh'?'图片上传失败':'Image upload failed');
+      return;
+    }
+  }
+
+  await dbInsert('milestones',{cat,date,icon,title,description,image_url:imageUrl});
   showToast(lang==='zh'?'里程碑已保存！':'Milestone saved!');
   toggleMilestoneForm(cat);
   document.getElementById(cat+'-milestone-title').value='';
   document.getElementById(cat+'-milestone-desc').value='';
+  const preview=document.getElementById(cat+'-milestone-preview');
+  if(preview)preview.style.display='none';
+  const input=document.getElementById(cat+'-milestone-image');
+  if(input)input.value='';
   loadMilestones(cat);
 }
 
