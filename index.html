@@ -675,14 +675,10 @@ async function storageUpload(file,path){
   try{
     const r=await fetch(SUPA_URL+'/storage/v1/object/photos/'+path,{
       method:'POST',
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':file.type||'application/octet-stream','x-upsert':'true'},
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':file.type},
       body:file,
       signal:ctl.signal
     });
-    if(!r.ok){
-      const errText=await r.text().catch(()=>'');
-      throw new Error('storage upload failed: '+r.status+' '+errText);
-    }
     return SUPA_URL+'/storage/v1/object/public/photos/'+path;
   }finally{clearTimeout(timer);}
 }
@@ -1137,10 +1133,8 @@ async function deleteComment(id){
 
 function addVideo(e){const f=e.target.files[0];if(f)addVideoFile(f);}
 async function addVideoFile(file){
-  showToast(lang==='zh'?'视频上传中…':'Uploading video…');
   const ext=(file.name.match(/\.[a-zA-Z0-9]+$/)||['.mp4'])[0];
-  const rand=Math.random().toString(36).slice(2,10);
-  const path='videos/'+Date.now()+'-'+rand+ext;
+  const path='videos/'+Date.now()+'-'+Math.random().toString(36).slice(2,10)+ext;
   let url;
   try{
     url=await storageUpload(file,path);
@@ -1149,44 +1143,48 @@ async function addVideoFile(file){
     return;
   }
   const vname=file.name.replace(/\.[^.]+$/,'');
-  // 数据库是唯一数据源（不再用 localStorage，否则手机/电脑各存各的，无法同步）
   try{
     await dbInsert('diary_entries',{
       cat:'__video__',date:new Date().toISOString().slice(0,10),
       title_zh:vname,title_en:'',
       body_zh:url,body_en:''
     });
-    showToast(lang==='zh'?'视频已上传！':'Video uploaded!');
-  }catch(e){
-    // 存储已经成功，但记录没写进数据库，其它设备暂时看不到——明确告知，别悄悄吞掉
-    showToast(lang==='zh'?'视频已存储，但同步失败，请稍后刷新重试':'Uploaded, but sync failed — refresh to retry');
-  }
+  }catch(e){}
   loadVideos();
+  showToast(lang==='zh'?'视频已上传，转码后即可播放':'Uploaded, encoding...');
 }
 
 async function loadVideos(){
   const grid=document.getElementById('video-grid');
   if(!grid)return;
   const dropZone=grid.querySelector('.video-drop-zone');
-  // 数据库是唯一数据源，所有设备读到的都是同一份，不再用 localStorage 拼凑
+  grid.innerHTML='';
+  if(dropZone)grid.appendChild(dropZone);
   try{
     const db=await dbSelect('diary_entries','cat=eq.__video__&limit=50');
-    const all=(db||[]).filter(r=>r.body_zh).map(r=>({url:r.body_zh,name:r.title_zh,time:Date.parse(r.date||0)}));
+    const all=(db||[]).filter(r=>r.body_zh).map(r=>({
+      url:r.body_zh,name:r.title_zh,time:Date.parse(r.date||0)
+    }));
     renderVideos(all,grid,dropZone);
   }catch(e){
-    showToast(lang==='zh'?'视频加载失败，请检查网络':'Failed to load videos');
+    // 静默失败
   }
 }
 
 function renderVideos(all,grid,dropZone){
-  grid.querySelectorAll('.video-card').forEach(c=>c.remove());
   if(!all||!all.length)return;
+  grid.querySelectorAll('.video-card').forEach(c=>c.remove());
   all.slice().reverse().forEach(v=>{
-    // 直接用 Supabase 的公开地址播放，不要再改写成 netlify 域名下的路径（那个路径根本不存在，会导致播放失败/串源）
-    let playSrc=v.url;
+    const isSupabase=v.url&&v.url.includes('supabase.co');
     const card=document.createElement('div');
     card.className='video-card';
-    card.innerHTML='<div class="video-thumb"><video src="'+playSrc+'" controls preload="auto" style="width:100%;height:100%;display:block;"></video></div><div class="video-meta"><p class="video-cat-tag">jojo\'s cats</p><p class="video-title">'+(v.caption||v.name||'视频')+'</p><p style="margin-top:6px;font-size:10px;color:var(--warm);letter-spacing:1px;"><a href="'+playSrc+'" download style="color:var(--orange);">📥 下载</a>'+(v.url&&v.url.includes('supabase')?' · <a href="#" onclick="navigator.clipboard.writeText(\''+v.url+'\');this.textContent=\'已复制\';return false;" style="color:var(--warm);">📋 复制链接</a>':'')+'</p></div>';
+    if(isSupabase){
+      // 还没转码的，显示等待提示
+      card.innerHTML='<div class="video-thumb" style="display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.03);"><p style="color:rgba(255,255,255,0.3);font-size:11px;letter-spacing:1px;">⏳ 转码中…</p></div><div class="video-meta"><p class="video-cat-tag">jojo\'s cats</p><p class="video-title">'+(v.caption||v.name||'视频')+'</p></div>';
+    }else{
+      // 已转码的可以直接播放
+      card.innerHTML='<div class="video-thumb"><video src="'+v.url+'" controls preload="auto" style="width:100%;height:100%;display:block;"></video></div><div class="video-meta"><p class="video-cat-tag">jojo\'s cats</p><p class="video-title">'+(v.caption||v.name||'视频')+'</p><p style="margin-top:6px;font-size:10px;color:var(--warm);letter-spacing:1px;"><a href="'+v.url+'" download style="color:var(--orange);">📥 下载</a></p></div>';
+    }
     grid.insertBefore(card,dropZone||grid.firstChild);
   });
 }
