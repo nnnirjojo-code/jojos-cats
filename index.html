@@ -1142,65 +1142,32 @@ async function addVideoFile(file){
     return;
   }
   const vname=file.name.replace(/\.[^.]+$/,'');
-  // 保存到 localStorage
+  // 存到 localStorage（设备本地）
   const v=JSON.parse(localStorage.getItem('jojos_videos')||'[]');
   v.push({url,name:vname,time:Date.now()});
   localStorage.setItem('jojos_videos',JSON.stringify(v));
-  // 同时更新存储桶里的视频清单（这样所有设备都能读到）
-  await syncVideoManifest();
   loadVideos();
   showToast(lang==='zh'?'视频已上传！':'Video uploaded!');
 }
 
-async function syncVideoManifest(){
-  // 合并 localStorage + 云端已有清单，写回存储桶
-  const local=JSON.parse(localStorage.getItem('jojos_videos')||'[]');
-  // 尝试读取云端清单
-  let cloud=[];
-  try{
-    const r=await fetch(SUPA_URL+'/storage/v1/object/public/photos/_videos.json?'+Date.now());
-    if(r.ok)cloud=await r.json();
-  }catch(e){}
-  // 去重合并
-  const seen=new Set();
-  const all=[];
-  for(const v of [...cloud,...local]){
-    if(!seen.has(v.url)){seen.add(v.url);all.push(v);}
-  }
-  // 写回存储桶（用 upload 方式，POST 是通的）
-  const blob=new Blob([JSON.stringify(all)],{type:'application/json'});
-  try{
-    await fetch(SUPA_URL+'/storage/v1/object/photos/_videos.json',{
-      method:'POST',
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','x-upsert':'true'},
-      body:blob
-    });
-  }catch(e){}
-}
-
-async function loadVideos(){
+function loadVideos(){
   const grid=document.getElementById('video-grid');
   if(!grid)return;
   const dropZone=grid.querySelector('.video-drop-zone');
   grid.innerHTML='';
   if(dropZone)grid.appendChild(dropZone);
-  // 从存储桶读视频清单（所有设备共享）
-  let all=[];
-  try{
-    const r=await fetch(SUPA_URL+'/storage/v1/object/public/photos/_videos.json?'+Date.now());
-    if(r.ok)all=await r.json();
-  }catch(e){}
-  // 合并 localStorage（离线兜底）
-  const ls=JSON.parse(localStorage.getItem('jojos_videos')||'[]');
-  const seen=new Set();
-  for(const v of[...ls,...all]){
-    if(!seen.has(v.url)){seen.add(v.url);all.push(v);}
-  }
-  if(!all.length)return;
-  all.slice().reverse().forEach(v=>{
+  const videos=JSON.parse(localStorage.getItem('jojos_videos')||'[]');
+  if(!videos.length)return;
+  videos.slice().reverse().forEach(v=>{
+    // Supabase视频地址转Netlify（国内可访问）
+    let src=v.url;
+    if(src.includes('tyvsibozgmkhlskyeyci.supabase.co')){
+      const m=src.match(/\/photos\/(.+)$/);
+      if(m)src='https://seemycats.netlify.app/'+m[1];
+    }
     const card=document.createElement('div');
     card.className='video-card';
-    card.innerHTML='<div class="video-thumb"><video src="'+v.url+'" controls preload="metadata" style="width:100%;height:100%;display:block;" onerror="this.parentElement.innerHTML=\'<div style=\\\'display:flex;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,0.3);font-size:11px;\\\'>😿 无法播放</div>\'"></video></div><div class="video-meta"><p class="video-cat-tag">jojo\'s cats</p><p class="video-title">'+(v.caption||v.name||'视频')+'</p></div>';
+    card.innerHTML='<div class="video-thumb"><video src="'+src+'" controls preload="metadata" style="width:100%;height:100%;display:block;" onerror="this.outerHTML=\'<div style=\\\'display:flex;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,0.3);font-size:11px;\\\'>😿 无法播放</div>\'"></video></div><div class="video-meta"><p class="video-cat-tag">jojo\'s cats</p><p class="video-title">'+(v.caption||v.name||'视频')+'</p></div>';
     grid.insertBefore(card,dropZone||grid.firstChild);
   });
 }
