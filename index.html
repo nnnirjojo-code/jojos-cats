@@ -669,13 +669,18 @@ async function dbDelete(table,id){
   });
 }
 async function storageUpload(file,path){
-  const r=await dbFetch(SUPA_URL+'/storage/v1/object/photos/'+path,{
-    method:'POST',
-    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':file.type},
-    body:file
-  });
-  const d=await r.json();
-  return SUPA_URL+'/storage/v1/object/public/photos/'+path;
+  // 上传不用短超时（大文件视频可能传很久）
+  const ctl=new AbortController();
+  const timer=setTimeout(()=>ctl.abort(),120000); // 2分钟超时
+  try{
+    const r=await fetch(SUPA_URL+'/storage/v1/object/photos/'+path,{
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':file.type},
+      body:file,
+      signal:ctl.signal
+    });
+    return SUPA_URL+'/storage/v1/object/public/photos/'+path;
+  }finally{clearTimeout(timer);}
 }
 async function storageDelete(path){
   await dbFetch(SUPA_URL+'/storage/v1/object/photos/'+path,{
