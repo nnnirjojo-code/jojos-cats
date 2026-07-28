@@ -589,14 +589,25 @@ const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 let lang='zh';
 let selectedIcon={};
 
+const FETCH_TIMEOUT=8000; // 8秒超时
+
+async function dbFetch(url,opt={}){
+  const ctl=new AbortController();
+  const timer=setTimeout(()=>ctl.abort(),FETCH_TIMEOUT);
+  try{
+    const r=await fetch(url,{...opt,signal:ctl.signal});
+    return r;
+  }finally{clearTimeout(timer);}
+}
+
 async function dbSelect(table,filter=''){
-  const r=await fetch(SUPA_URL+'/rest/v1/'+table+'?order=id.desc'+(filter?'&'+filter:''),{
+  const r=await dbFetch(SUPA_URL+'/rest/v1/'+table+'?order=id.desc'+(filter?'&'+filter:''),{
     headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
   });
   return r.json();
 }
 async function dbInsert(table,data){
-  const r=await fetch(SUPA_URL+'/rest/v1/'+table,{
+  const r=await dbFetch(SUPA_URL+'/rest/v1/'+table,{
     method:'POST',
     headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=representation'},
     body:JSON.stringify(data)
@@ -604,13 +615,13 @@ async function dbInsert(table,data){
   return r.json();
 }
 async function dbDelete(table,id){
-  await fetch(SUPA_URL+'/rest/v1/'+table+'?id=eq.'+id,{
+  await dbFetch(SUPA_URL+'/rest/v1/'+table+'?id=eq.'+id,{
     method:'DELETE',
     headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
   });
 }
 async function storageUpload(file,path){
-  const r=await fetch(SUPA_URL+'/storage/v1/object/photos/'+path,{
+  const r=await dbFetch(SUPA_URL+'/storage/v1/object/photos/'+path,{
     method:'POST',
     headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':file.type},
     body:file
@@ -619,7 +630,7 @@ async function storageUpload(file,path){
   return SUPA_URL+'/storage/v1/object/public/photos/'+path;
 }
 async function storageDelete(path){
-  await fetch(SUPA_URL+'/storage/v1/object/photos/'+path,{
+  await dbFetch(SUPA_URL+'/storage/v1/object/photos/'+path,{
     method:'DELETE',
     headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
   });
@@ -705,20 +716,28 @@ async function loadCatGallery(cat){
   const grid=document.getElementById(cat+'-gallery-grid');
   if(!grid)return;
   grid.innerHTML='<div class="loading-state">加载中…</div>';
-  const photos=await dbSelect('photos','cat=eq.'+cat);
-  grid.innerHTML='';
-  if(!photos.length){grid.innerHTML='<div class="empty-state">还没有照片 ✦</div>';return;}
-  photos.forEach(p=>grid.appendChild(makeGalleryItem(p)));
+  try{
+    const photos=await dbSelect('photos','cat=eq.'+cat);
+    grid.innerHTML='';
+    if(!photos||!photos.length){grid.innerHTML='<div class="empty-state">还没有照片 ✦</div>';return;}
+    photos.forEach(p=>grid.appendChild(makeGalleryItem(p)));
+  }catch(e){
+    grid.innerHTML='<div class="empty-state">😿 照片暂时加载失败，请检查网络</div>';
+  }
 }
 
 async function loadMainGallery(){
   const grid=document.getElementById('main-gallery-grid');
   if(!grid)return;
   grid.innerHTML='<div class="loading-state">加载中…</div>';
-  const photos=await dbSelect('photos');
-  grid.innerHTML='';
-  if(!photos.length){grid.innerHTML='<div class="empty-state">还没有照片 ✦</div>';return;}
-  photos.forEach(p=>grid.appendChild(makeGalleryItem(p)));
+  try{
+    const photos=await dbSelect('photos');
+    grid.innerHTML='';
+    if(!photos||!photos.length){grid.innerHTML='<div class="empty-state">还没有照片 ✦</div>';return;}
+    photos.forEach(p=>grid.appendChild(makeGalleryItem(p)));
+  }catch(e){
+    grid.innerHTML='<div class="empty-state">😿 照片暂时加载失败</div>';
+  }
 }
 
 function filterGallery(cat,btn){
@@ -834,10 +853,14 @@ async function loadDiary(cat){
   const el=document.getElementById(cat+'-entries');
   if(!el)return;
   el.innerHTML='<div class="loading-state">加载中…</div>';
-  const rows=await dbSelect('diary_entries','cat=eq.'+cat);
-  el.innerHTML='';
-  if(!rows.length){el.innerHTML='<div class="empty-state">还没有日记，写第一篇吧 ✦</div>';return;}
-  rows.forEach(r=>el.appendChild(makeDiaryEntry(r)));
+  try{
+    const rows=await dbSelect('diary_entries','cat=eq.'+cat);
+    el.innerHTML='';
+    if(!rows||!rows.length){el.innerHTML='<div class="empty-state">还没有日记，写第一篇吧 ✦</div>';return;}
+    rows.forEach(r=>el.appendChild(makeDiaryEntry(r)));
+  }catch(e){
+    el.innerHTML='<div class="empty-state">😿 日记暂时加载失败</div>';
+  }
 }
 
 async function saveDiary(cat){
@@ -902,10 +925,14 @@ async function loadMilestones(cat){
   const el=document.getElementById(cat+'-milestones');
   if(!el)return;
   el.innerHTML='<div class="loading-state">加载中…</div>';
-  const rows=await dbSelect('milestones','cat=eq.'+cat);
-  el.innerHTML='';
-  if(!rows.length){el.innerHTML='<div class="empty-state">还没有里程碑，记录重要时刻吧 ✦</div>';return;}
-  rows.forEach(r=>el.appendChild(makeMilestoneCard(r)));
+  try{
+    const rows=await dbSelect('milestones','cat=eq.'+cat);
+    el.innerHTML='';
+    if(!rows||!rows.length){el.innerHTML='<div class="empty-state">还没有里程碑，记录重要时刻吧 ✦</div>';return;}
+    rows.forEach(r=>el.appendChild(makeMilestoneCard(r)));
+  }catch(e){
+    el.innerHTML='<div class="empty-state">😿 里程碑暂时加载失败</div>';
+  }
 }
 
 function toggleMilestoneForm(cat){
@@ -1018,14 +1045,18 @@ async function loadComments(){
   const el=document.getElementById('comments-list');
   if(!el)return;
   el.innerHTML='<div class="loading-state">加载中…</div>';
-  const rows=await dbSelect('comments');
-  el.innerHTML='';
-  if(!rows.length){el.innerHTML='<div class="empty-state">还没有留言，来第一个吧 ✦</div>';return;}
-  const title=document.createElement('h2');
-  title.className='comments-title';
-  title.textContent=lang==='zh'?'所有留言':'All Comments';
-  el.appendChild(title);
-  rows.forEach(r=>el.appendChild(makeComment(r)));
+  try{
+    const rows=await dbSelect('comments');
+    el.innerHTML='';
+    if(!rows||!rows.length){el.innerHTML='<div class="empty-state">还没有留言，来第一个吧 ✦</div>';return;}
+    const title=document.createElement('h2');
+    title.className='comments-title';
+    title.textContent=lang==='zh'?'所有留言':'All Comments';
+    el.appendChild(title);
+    rows.forEach(r=>el.appendChild(makeComment(r)));
+  }catch(e){
+    el.innerHTML='<div class="empty-state">😿 留言暂时加载失败</div>';
+  }
 }
 
 async function submitComment(){
