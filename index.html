@@ -1142,10 +1142,18 @@ async function addVideoFile(file){
     return;
   }
   const vname=file.name.replace(/\.[^.]+$/,'');
-  // 存到 localStorage（设备本地）
+  // 存到 localStorage
   const v=JSON.parse(localStorage.getItem('jojos_videos')||'[]');
   v.push({url,name:vname,time:Date.now()});
   localStorage.setItem('jojos_videos',JSON.stringify(v));
+  // 写入日记表（这个表的POST是通的）
+  try{
+    await dbInsert('diary_entries',{
+      cat:'__video__',date:new Date().toISOString().slice(0,10),
+      title_zh:vname,title_en:'',
+      body_zh:url,body_en:''
+    });
+  }catch(e){/* localStorage兜底 */}
   loadVideos();
   showToast(lang==='zh'?'视频已上传！':'Video uploaded!');
 }
@@ -1156,24 +1164,40 @@ function loadVideos(){
   const dropZone=grid.querySelector('.video-drop-zone');
   grid.innerHTML='';
   if(dropZone)grid.appendChild(dropZone);
-  const videos=JSON.parse(localStorage.getItem('jojos_videos')||'[]');
-  if(!videos.length)return;
-  videos.slice().reverse().forEach(v=>{
-    // Supabase视频地址转Netlify（国内可访问）
-    let src=v.url;
-    if(src.includes('tyvsibozgmkhlskyeyci.supabase.co')){
-      const m=src.match(/\/photos\/(.+)$/);
-      if(m)src='https://seemycats.netlify.app/'+m[1];
-    }
-    const card=document.createElement('div');
-    card.className='video-card';
-    // 计算可播放的地址：优先Netlify，其次Supabase原地址
+  // 收集所有视频
+  let all=[];
+  // localStorage 同步加载
+  const local=JSON.parse(localStorage.getItem('jojos_videos')||'[]');
+  local.forEach(v=>all.push(v));
+  // 异步从日记表加载（跨设备同步）
+  (async()=>{
+    try{
+      const db=await dbSelect('diary_entries','cat=eq.__video__&limit=50');
+      if(db&&db.length){
+        const existing=new Set(all.map(v=>v.url));
+        db.forEach(r=>{
+          if(r.body_zh&&!existing.has(r.body_zh))
+            all.push({url:r.body_zh,name:r.title_zh,time:Date.parse(r.date||0)});
+        });
+        renderVideos(all,grid,dropZone);
+      }
+    }catch(e){}
+  })();
+  renderVideos(all,grid,dropZone);
+}
+
+function renderVideos(all,grid,dropZone){
+  if(!all||!all.length)return;
+  grid.querySelectorAll('.video-card').forEach(c=>c.remove());
+  all.slice().reverse().forEach(v=>{
     let playSrc=v.url;
-    if(playSrc.includes('tyvsibozgmkhlskyeyci.supabase.co')){
+    if(playSrc&&playSrc.includes('tyvsibozgmkhlskyeyci.supabase.co')){
       const m=playSrc.match(/\/photos\/(.+)$/);
       if(m)playSrc='https://seemycats.netlify.app/'+m[1];
     }
-    card.innerHTML='<div class="video-thumb"><video src="'+playSrc+'" controls preload="auto" style="width:100%;height:100%;display:block;"></video></div><div class="video-meta"><p class="video-cat-tag">jojo\'s cats</p><p class="video-title">'+(v.caption||v.name||'视频')+'</p><p style="margin-top:6px;font-size:10px;color:var(--warm);letter-spacing:1px;"><a href="'+playSrc+'" download style="color:var(--orange);">📥 下载</a>'+(v.url.includes('supabase')?' · <a href="#" onclick="navigator.clipboard.writeText(\''+v.url+'\');this.textContent=\'已复制\';return false;" style="color:var(--warm);">📋 复制链接</a>':'')+'</p></div>';
+    const card=document.createElement('div');
+    card.className='video-card';
+    card.innerHTML='<div class="video-thumb"><video src="'+playSrc+'" controls preload="auto" style="width:100%;height:100%;display:block;"></video></div><div class="video-meta"><p class="video-cat-tag">jojo\'s cats</p><p class="video-title">'+(v.caption||v.name||'视频')+'</p><p style="margin-top:6px;font-size:10px;color:var(--warm);letter-spacing:1px;"><a href="'+playSrc+'" download style="color:var(--orange);">📥 下载</a>'+(v.url&&v.url.includes('supabase')?' · <a href="#" onclick="navigator.clipboard.writeText(\''+v.url+'\');this.textContent=\'已复制\';return false;" style="color:var(--warm);">📋 复制链接</a>':'')+'</p></div>';
     grid.insertBefore(card,dropZone||grid.firstChild);
   });
 }
