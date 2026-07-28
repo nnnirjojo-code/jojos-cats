@@ -1143,6 +1143,11 @@ async function addVideoFile(file){
     return;
   }
   const vname=file.name.replace(/\.[^.]+$/,'');
+  // 本地存一份（立即可见）
+  const v=JSON.parse(localStorage.getItem('jojos_videos')||'[]');
+  v.push({url,name:vname,time:Date.now()});
+  localStorage.setItem('jojos_videos',JSON.stringify(v));
+  // 同时写数据库（跨设备同步用）
   try{
     await dbInsert('diary_entries',{
       cat:'__video__',date:new Date().toISOString().slice(0,10),
@@ -1151,7 +1156,7 @@ async function addVideoFile(file){
     });
   }catch(e){}
   loadVideos();
-  showToast(lang==='zh'?'视频已上传，转码后即可播放':'Uploaded, encoding...');
+  showToast(lang==='zh'?'视频已上传':'Uploaded');
 }
 
 async function loadVideos(){
@@ -1160,15 +1165,23 @@ async function loadVideos(){
   const dropZone=grid.querySelector('.video-drop-zone');
   grid.innerHTML='';
   if(dropZone)grid.appendChild(dropZone);
+  // 合并localStorage（本地） + 数据库（跨设备）
+  let all=[];
+  const ls=JSON.parse(localStorage.getItem('jojos_videos')||'[]');
+  ls.forEach(v=>all.push(v));
   try{
     const db=await dbSelect('diary_entries','cat=eq.__video__&limit=50');
-    const all=(db||[]).filter(r=>r.body_zh).map(r=>({
-      url:r.body_zh,name:r.title_zh,time:Date.parse(r.date||0)
-    }));
-    renderVideos(all,grid,dropZone);
-  }catch(e){
-    // 静默失败
-  }
+    if(db&&db.length){
+      const seen=new Set(all.map(v=>v.url));
+      db.forEach(r=>{
+        if(r.body_zh&&!seen.has(r.body_zh)){
+          seen.add(r.body_zh);
+          all.push({url:r.body_zh,name:r.title_zh,time:Date.parse(r.date||0)});
+        }
+      });
+    }
+  }catch(e){}
+  renderVideos(all,grid,dropZone);
 }
 
 function renderVideos(all,grid,dropZone){
