@@ -1133,6 +1133,7 @@ async function deleteComment(id){
 
 function addVideo(e){const f=e.target.files[0];if(f)addVideoFile(f);}
 async function addVideoFile(file){
+  showToast(lang==='zh'?'视频上传中…':'Uploading video…');
   const path='videos/'+Date.now()+'-'+file.name.replace(/\s/g,'_');
   let url;
   try{
@@ -1142,59 +1143,41 @@ async function addVideoFile(file){
     return;
   }
   const vname=file.name.replace(/\.[^.]+$/,'');
-  // 存到 localStorage
-  const v=JSON.parse(localStorage.getItem('jojos_videos')||'[]');
-  v.push({url,name:vname,time:Date.now()});
-  localStorage.setItem('jojos_videos',JSON.stringify(v));
-  // 写入日记表（这个表的POST是通的）
+  // 数据库是唯一数据源（不再用 localStorage，否则手机/电脑各存各的，无法同步）
   try{
     await dbInsert('diary_entries',{
       cat:'__video__',date:new Date().toISOString().slice(0,10),
       title_zh:vname,title_en:'',
       body_zh:url,body_en:''
     });
-  }catch(e){/* localStorage兜底 */}
+    showToast(lang==='zh'?'视频已上传！':'Video uploaded!');
+  }catch(e){
+    // 存储已经成功，但记录没写进数据库，其它设备暂时看不到——明确告知，别悄悄吞掉
+    showToast(lang==='zh'?'视频已存储，但同步失败，请稍后刷新重试':'Uploaded, but sync failed — refresh to retry');
+  }
   loadVideos();
-  showToast(lang==='zh'?'视频已上传！':'Video uploaded!');
 }
 
-function loadVideos(){
+async function loadVideos(){
   const grid=document.getElementById('video-grid');
   if(!grid)return;
   const dropZone=grid.querySelector('.video-drop-zone');
-  grid.innerHTML='';
-  if(dropZone)grid.appendChild(dropZone);
-  // 收集所有视频
-  let all=[];
-  // localStorage 同步加载
-  const local=JSON.parse(localStorage.getItem('jojos_videos')||'[]');
-  local.forEach(v=>all.push(v));
-  // 异步从日记表加载（跨设备同步）
-  (async()=>{
-    try{
-      const db=await dbSelect('diary_entries','cat=eq.__video__&limit=50');
-      if(db&&db.length){
-        const existing=new Set(all.map(v=>v.url));
-        db.forEach(r=>{
-          if(r.body_zh&&!existing.has(r.body_zh))
-            all.push({url:r.body_zh,name:r.title_zh,time:Date.parse(r.date||0)});
-        });
-        renderVideos(all,grid,dropZone);
-      }
-    }catch(e){}
-  })();
-  renderVideos(all,grid,dropZone);
+  // 数据库是唯一数据源，所有设备读到的都是同一份，不再用 localStorage 拼凑
+  try{
+    const db=await dbSelect('diary_entries','cat=eq.__video__&limit=50');
+    const all=(db||[]).filter(r=>r.body_zh).map(r=>({url:r.body_zh,name:r.title_zh,time:Date.parse(r.date||0)}));
+    renderVideos(all,grid,dropZone);
+  }catch(e){
+    showToast(lang==='zh'?'视频加载失败，请检查网络':'Failed to load videos');
+  }
 }
 
 function renderVideos(all,grid,dropZone){
-  if(!all||!all.length)return;
   grid.querySelectorAll('.video-card').forEach(c=>c.remove());
+  if(!all||!all.length)return;
   all.slice().reverse().forEach(v=>{
+    // 直接用 Supabase 的公开地址播放，不要再改写成 netlify 域名下的路径（那个路径根本不存在，会导致播放失败/串源）
     let playSrc=v.url;
-    if(playSrc&&playSrc.includes('tyvsibozgmkhlskyeyci.supabase.co')){
-      const m=playSrc.match(/\/photos\/(.+)$/);
-      if(m)playSrc='https://seemycats.netlify.app/'+m[1];
-    }
     const card=document.createElement('div');
     card.className='video-card';
     card.innerHTML='<div class="video-thumb"><video src="'+playSrc+'" controls preload="auto" style="width:100%;height:100%;display:block;"></video></div><div class="video-meta"><p class="video-cat-tag">jojo\'s cats</p><p class="video-title">'+(v.caption||v.name||'视频')+'</p><p style="margin-top:6px;font-size:10px;color:var(--warm);letter-spacing:1px;"><a href="'+playSrc+'" download style="color:var(--orange);">📥 下载</a>'+(v.url&&v.url.includes('supabase')?' · <a href="#" onclick="navigator.clipboard.writeText(\''+v.url+'\');this.textContent=\'已复制\';return false;" style="color:var(--warm);">📋 复制链接</a>':'')+'</p></div>';
