@@ -1161,16 +1161,22 @@ async function loadVideos(){
   const dropZone=grid.querySelector('.video-drop-zone');
   grid.innerHTML='';
   if(dropZone)grid.appendChild(dropZone);
-  // 优先从DB加载（跨设备同步），失败则用localStorage
-  let videos=[];
+  // 合并数据库 + localStorage（数据库跨设备，localStorage兜底）
+  let all=[];
   try{
-    videos=await dbSelect('photos','cat=eq.__video__&limit=50');
+    const db=await dbSelect('photos','cat=eq.__video__&limit=50');
+    if(db&&db.length)all=all.concat(db);
   }catch(e){}
-  if(!videos||!videos.length){
-    videos=JSON.parse(localStorage.getItem('jojos_videos')||'[]');
+  const ls=JSON.parse(localStorage.getItem('jojos_videos')||'[]');
+  all=all.concat(ls);
+  if(!all.length)return;
+  // 按时间去重（以url为准）
+  const seen=new Set();
+  const unique=[];
+  for(const v of all.slice().reverse()){
+    if(!seen.has(v.url)){seen.add(v.url);unique.push(v);}
   }
-  if(!videos||!videos.length)return;
-  videos.slice().reverse().forEach(v=>{
+  unique.forEach(v=>{
     const card=document.createElement('div');
     card.className='video-card';
     const cap=v.caption||v.name||'视频';
