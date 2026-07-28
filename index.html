@@ -1167,7 +1167,8 @@ function loadVideos(){
     }
     const card=document.createElement('div');
     card.className='video-card';
-    card.innerHTML='<div class="video-thumb"><video src="'+src+'" controls preload="metadata" style="width:100%;height:100%;display:block;" onerror="this.outerHTML=\'<div style=\\\'display:flex;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,0.3);font-size:11px;\\\'>😿 无法播放</div>\'"></video></div><div class="video-meta"><p class="video-cat-tag">jojo\'s cats</p><p class="video-title">'+(v.caption||v.name||'视频')+'</p></div>';
+    const netlifySrc='https://seemycats.netlify.app/videos/1785272127834-0257a2ca3b0e6b4865a0f2f23386d9b2.mp4';
+    card.innerHTML='<div class="video-thumb"><video src="'+netlifySrc+'" controls preload="auto" style="width:100%;height:100%;display:block;"></video></div><div class="video-meta"><p class="video-cat-tag">jojo\'s cats</p><p class="video-title">'+(v.caption||v.name||'视频')+'</p><p style="margin-top:6px;font-size:10px;color:var(--warm);letter-spacing:1px;"><a href="'+netlifySrc+'" download style="color:var(--orange);">📥 下载视频</a></p></div>';
     grid.insertBefore(card,dropZone||grid.firstChild);
   });
 }
