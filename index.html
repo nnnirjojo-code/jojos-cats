@@ -637,7 +637,7 @@ const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 let lang='zh';
 let selectedIcon={};
 
-const FETCH_TIMEOUT=8000; // 8秒超时
+const FETCH_TIMEOUT=30000; // 30秒超时（国内网络慢）
 
 async function dbFetch(url,opt={}){
   const ctl=new AbortController();
@@ -1141,10 +1141,16 @@ async function addVideoFile(file){
     showToast(lang==='zh'?'视频上传失败':'Upload failed');
     return;
   }
-  // 存到 Supabase（跟照片同一张表，cat='__video__' 做标记）
+  const vname=file.name.replace(/\.[^.]+$/,'');
+  // 同时存DB和localStorage（DB失败localStorage兜底）
   try{
-    await dbInsert('photos',{cat:'__video__',url,caption:file.name.replace(/\.[^.]+$/,''),description:''});
-  }catch(e){}
+    await dbInsert('photos',{cat:'__video__',url,caption:vname,description:''});
+  }catch(e){
+    // DB可能因RLS权限失败，localStorage兜底
+    const v=JSON.parse(localStorage.getItem('jojos_videos')||'[]');
+    v.push({url,name:vname,time:Date.now()});
+    localStorage.setItem('jojos_videos',JSON.stringify(v));
+  }
   loadVideos();
   showToast(lang==='zh'?'视频已上传！':'Video uploaded!');
 }
@@ -1155,16 +1161,20 @@ async function loadVideos(){
   const dropZone=grid.querySelector('.video-drop-zone');
   grid.innerHTML='';
   if(dropZone)grid.appendChild(dropZone);
-  // 从 Supabase 加载
+  // 优先从DB加载（跨设备同步），失败则用localStorage
   let videos=[];
   try{
     videos=await dbSelect('photos','cat=eq.__video__&limit=50');
   }catch(e){}
+  if(!videos||!videos.length){
+    videos=JSON.parse(localStorage.getItem('jojos_videos')||'[]');
+  }
   if(!videos||!videos.length)return;
   videos.slice().reverse().forEach(v=>{
     const card=document.createElement('div');
     card.className='video-card';
-    card.innerHTML='<div class="video-thumb"><video src="'+v.url+'" controls preload="metadata" style="width:100%;height:100%;display:block;"></video></div><div class="video-meta"><p class="video-cat-tag">jojo\'s cats</p><p class="video-title">'+(v.caption||v.name||'视频')+'</p></div>';
+    const cap=v.caption||v.name||'视频';
+    card.innerHTML='<div class="video-thumb"><video src="'+v.url+'" controls preload="metadata" style="width:100%;height:100%;display:block;"></video></div><div class="video-meta"><p class="video-cat-tag">jojo\'s cats</p><p class="video-title">'+cap+'</p></div>';
     grid.insertBefore(card,dropZone||grid.firstChild);
   });
 }
