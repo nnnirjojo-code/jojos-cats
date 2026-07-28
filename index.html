@@ -22,8 +22,8 @@ nav{background:var(--dark);position:sticky;top:0;z-index:100;display:flex;align-
 
 /* HOME */
 .home-wrap{min-height:calc(100vh - 56px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:36px 20px 44px;position:relative;overflow:hidden;}
-.home-bg{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center;filter:brightness(0.28) sepia(30%);transition:opacity 1.5s ease;opacity:0;}
-.home-bg.loaded{opacity:1;}
+.home-bg{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center;filter:brightness(0.28) sepia(30%);transition:opacity 1.5s ease;opacity:0;background:linear-gradient(135deg,#2C2218,#4A3728);}
+.home-bg.loaded{opacity:1;filter:brightness(0.28) sepia(30%);}
 .home-content{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;}
 .home-logo-area{text-align:center;margin-bottom:40px;}
 .home-site-name{font-family:'Playfair Display',serif;font-size:clamp(32px,5vw,52px);font-weight:900;font-style:italic;color:var(--cream);text-shadow:0 2px 20px rgba(0,0,0,0.4);}
@@ -637,15 +637,18 @@ async function storageDelete(path){
 }
 
 async function loadHomeBg(){
+  const bg=document.getElementById('home-bg');
+  if(!bg)return;
+  // 先显示深色渐变背景
+  bg.classList.add('loaded');
   try{
     const photos=await dbSelect('photos','limit=20&order=id.desc');
     if(!photos||!photos.length)return;
     const pick=photos[Math.floor(Math.random()*photos.length)];
-    const bg=document.getElementById('home-bg');
-    bg.style.backgroundImage='url('+pick.url+')';
-    // 图片预加载完成后再显示
+    // 预加载照片，无论成功失败都替换背景
     const tmp=new Image();
-    tmp.onload=()=>bg.classList.add('loaded');
+    tmp.onload=()=>{bg.style.backgroundImage='url('+pick.url+')';};
+    tmp.onerror=()=>{/* 图片加载失败，保持渐变背景 */};
     tmp.src=pick.url;
   }catch(e){}
 }
