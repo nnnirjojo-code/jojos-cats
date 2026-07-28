@@ -675,10 +675,14 @@ async function storageUpload(file,path){
   try{
     const r=await fetch(SUPA_URL+'/storage/v1/object/photos/'+path,{
       method:'POST',
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':file.type},
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':file.type||'application/octet-stream','x-upsert':'true'},
       body:file,
       signal:ctl.signal
     });
+    if(!r.ok){
+      const errText=await r.text().catch(()=>'');
+      throw new Error('storage upload failed: '+r.status+' '+errText);
+    }
     return SUPA_URL+'/storage/v1/object/public/photos/'+path;
   }finally{clearTimeout(timer);}
 }
@@ -1134,7 +1138,9 @@ async function deleteComment(id){
 function addVideo(e){const f=e.target.files[0];if(f)addVideoFile(f);}
 async function addVideoFile(file){
   showToast(lang==='zh'?'视频上传中…':'Uploading video…');
-  const path='videos/'+Date.now()+'-'+file.name.replace(/\s/g,'_');
+  const ext=(file.name.match(/\.[a-zA-Z0-9]+$/)||['.mp4'])[0];
+  const rand=Math.random().toString(36).slice(2,10);
+  const path='videos/'+Date.now()+'-'+rand+ext;
   let url;
   try{
     url=await storageUpload(file,path);
