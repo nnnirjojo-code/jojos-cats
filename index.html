@@ -1139,20 +1139,24 @@ async function addVideoFile(file){
   try{
     url=await storageUpload(file,path);
   }catch(e){
-    showToast(lang==='zh'?'视频上传失败':'Upload failed');
+    showToast(lang==='zh'?'上传失败':'Upload failed');
     return;
   }
   const vname=file.name.replace(/\.[^.]+$/,'');
-  // 本地存一份
+  // 存localStorage
   const v=JSON.parse(localStorage.getItem('jojos_videos')||'[]');
   v.push({url,name:vname,time:Date.now()});
   localStorage.setItem('jojos_videos',JSON.stringify(v));
-  // 写photos表（有权限，猫名字用_vid_不冲突）
+  // 写_latest_video到存储桶（定时任务读这个去同步）
   try{
-    await dbInsert('photos',{cat:'_vid_',url,caption:vname,description:''});
+    await fetch(SUPA_URL+'/storage/v1/object/photos/_latest_video',{
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','x-upsert':'true'},
+      body:JSON.stringify({url,name:vname,time:Date.now()})
+    });
   }catch(e){}
   loadVideos();
-  showToast(lang==='zh'?'视频已上传':'Uploaded');
+  showToast(lang==='zh'?'已上传':'Uploaded');
 }
 
 async function loadVideos(){
@@ -1259,7 +1263,6 @@ if(homeWrap&&spotlight){
 }
 
 loadCatAvatars();
-// DEPLOY_TRIGGER
 </script>
 </body>
 </html>
