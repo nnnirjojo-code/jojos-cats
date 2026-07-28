@@ -249,17 +249,17 @@ footer{background:var(--dark);text-align:center;padding:36px 20px;}
       </div>
       <div class="cats-row">
         <button class="cat-avatar-btn" onclick="showCatPage('talkie')">
-          <div class="avatar-ring"><img src="https://placekitten.com/400/400?image=1" alt="Talkie"><div class="avatar-overlay"><span data-zh="查看" data-en="View">查看</span></div></div>
+          <div class="avatar-ring"><img id="avatar-talkie" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect fill='%23C17F3B' width='400' height='400'/%3E%3Ctext x='200' y='210' text-anchor='middle' fill='%23FDF6EE' font-size='60' font-family='sans-serif'%3E...%3C/text%3E%3C/svg%3E" alt="Talkie" loading="lazy"><div class="avatar-overlay"><span data-zh="查看" data-en="View">查看</span></div></div>
           <div class="avatar-name">Talkie</div>
           <div class="avatar-birthday" data-zh="2023年8月14日" data-en="Aug 14, 2023">2023年8月14日</div>
         </button>
         <button class="cat-avatar-btn" onclick="showCatPage('shuciao')">
-          <div class="avatar-ring"><img src="https://placekitten.com/400/400?image=2" alt="薯条"><div class="avatar-overlay"><span data-zh="查看" data-en="View">查看</span></div></div>
+          <div class="avatar-ring"><img id="avatar-shuciao" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect fill='%23C17F3B' width='400' height='400'/%3E%3Ctext x='200' y='210' text-anchor='middle' fill='%23FDF6EE' font-size='60' font-family='sans-serif'%3E...%3C/text%3E%3C/svg%3E" alt="薯条" loading="lazy"><div class="avatar-overlay"><span data-zh="查看" data-en="View">查看</span></div></div>
           <div class="avatar-name" data-zh="薯条" data-en="French Fry">薯条</div>
           <div class="avatar-birthday" data-zh="2025年5月15日" data-en="May 15, 2025">2025年5月15日</div>
         </button>
         <button class="cat-avatar-btn" onclick="showCatPage('tummy')">
-          <div class="avatar-ring"><img src="https://placekitten.com/400/400?image=3" alt="Tummy"><div class="avatar-overlay"><span data-zh="查看" data-en="View">查看</span></div></div>
+          <div class="avatar-ring"><img id="avatar-tummy" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect fill='%23C17F3B' width='400' height='400'/%3E%3Ctext x='200' y='210' text-anchor='middle' fill='%23FDF6EE' font-size='60' font-family='sans-serif'%3E...%3C/text%3E%3C/svg%3E" alt="Tummy" loading="lazy"><div class="avatar-overlay"><span data-zh="查看" data-en="View">查看</span></div></div>
           <div class="avatar-name">Tummy</div>
           <div class="avatar-birthday" data-zh="2025年6月15日" data-en="Jun 15, 2025">2025年6月15日</div>
         </button>
@@ -626,13 +626,29 @@ async function storageDelete(path){
 
 async function loadHomeBg(){
   try{
-    const photos=await dbSelect('photos');
+    const photos=await dbSelect('photos','limit=20&order=id.desc');
     if(!photos||!photos.length)return;
     const pick=photos[Math.floor(Math.random()*photos.length)];
     const bg=document.getElementById('home-bg');
     bg.style.backgroundImage='url('+pick.url+')';
-    bg.classList.add('loaded');
+    // 图片预加载完成后再显示
+    const tmp=new Image();
+    tmp.onload=()=>bg.classList.add('loaded');
+    tmp.src=pick.url;
   }catch(e){}
+}
+
+async function loadCatAvatars(){
+  const cats=['talkie','shuciao','tummy'];
+  for(const cat of cats){
+    try{
+      const photos=await dbSelect('photos','cat=eq.'+cat+'&limit=1&order=id.desc');
+      if(photos&&photos.length){
+        const img=document.getElementById('avatar-'+cat);
+        if(img)img.src=photos[0].url;
+      }
+    }catch(e){}
+  }
 }
 
 function showPage(name){
@@ -645,6 +661,7 @@ function showPage(name){
   window.scrollTo(0,0);
   if(name==='gallery')loadMainGallery();
   if(name==='comments')loadComments();
+  if(name==='home')loadCatAvatars();
 }
 
 function showCatPage(cat){
@@ -1088,6 +1105,7 @@ document.addEventListener('keydown',e=>{
 });
 
 loadHomeBg();
+loadCatAvatars();
 </script>
 </body>
 </html>
