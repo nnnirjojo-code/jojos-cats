@@ -90,11 +90,11 @@ nav{background:rgba(5,3,3,0.85);backdrop-filter:blur(12px);-webkit-backdrop-filt
 .tab-content{display:none;}.tab-content.active{display:block;}
 
 /* GALLERY */
-.gallery-section{max-width:1000px;margin:0 auto;padding:36px 28px 60px;background:rgba(253,246,238,0.88);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);}
-.gallery-filter{display:flex;gap:8px;margin-bottom:28px;flex-wrap:wrap;}
-.filter-btn{background:none;border:0.5px solid var(--border);cursor:pointer;font-family:'Lato',sans-serif;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--warm);padding:7px 18px;transition:all 0.2s;}
-.filter-btn:hover,.filter-btn.active{background:var(--dark);color:var(--cream);border-color:var(--dark);}
-.gallery-grid{column-count:3;column-gap:14px;}
+.gallery-section{width:100%;padding:36px 24px 60px;}
+.gallery-filter{display:flex;gap:8px;margin-bottom:28px;flex-wrap:wrap;padding:0 4px;}
+.filter-btn{background:none;border:0.5px solid rgba(255,255,255,0.2);cursor:pointer;font-family:'Lato',sans-serif;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.5);padding:7px 18px;transition:all 0.2s;}
+.filter-btn:hover,.filter-btn.active{background:rgba(232,149,74,0.2);color:var(--cream);border-color:var(--orange);}
+.gallery-grid{columns:300px;column-gap:14px;}
 .gallery-item{overflow:hidden;cursor:pointer;position:relative;border:0.5px solid var(--border);break-inside:avoid;margin-bottom:14px;}
 .gallery-item img{width:100%;height:auto;display:block;filter:sepia(8%) contrast(1.04);transition:transform 0.6s ease;}
 .gallery-item:hover img{transform:scale(1.07);}
@@ -105,10 +105,10 @@ nav{background:rgba(5,3,3,0.85);backdrop-filter:blur(12px);-webkit-backdrop-filt
 body.is-owner .gallery-item:hover .delete-btn{display:flex;}
 
 /* DROP ZONE */
-.drop-zone{border:1.5px dashed var(--border);padding:40px 20px;text-align:center;margin-top:24px;transition:all 0.2s;cursor:pointer;position:relative;}
-.drop-zone.dragover{border-color:var(--gold);background:rgba(193,127,59,0.05);}
-.drop-zone p{font-size:13px;color:var(--warm);margin-bottom:6px;}
-.drop-zone span{font-size:10px;color:var(--border);letter-spacing:2px;text-transform:uppercase;}
+.drop-zone{border:1.5px dashed rgba(255,255,255,0.15);padding:40px 20px;text-align:center;margin:24px 4px 0;transition:all 0.2s;cursor:pointer;position:relative;}
+.drop-zone.dragover{border-color:var(--orange);background:rgba(232,149,74,0.08);}
+.drop-zone p{font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:6px;}
+.drop-zone span{font-size:10px;color:rgba(255,255,255,0.2);letter-spacing:2px;text-transform:uppercase;}
 .drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
 .upload-progress{margin-top:12px;font-size:11px;color:var(--gold);letter-spacing:1px;display:none;}
 
@@ -146,8 +146,8 @@ body.is-owner .gallery-item:hover .delete-btn{display:flex;}
 .diary-delete{background:none;border:none;cursor:pointer;color:var(--border);font-size:11px;letter-spacing:1px;margin-top:10px;display:none;font-family:'Lato',sans-serif;}
 body.is-owner .diary-delete{display:inline-block;}
 .diary-delete:hover{color:#c0392b;}
-.empty-state{text-align:center;padding:60px 0;color:var(--warm);font-size:13px;letter-spacing:1px;}
-.loading-state{text-align:center;padding:40px 0;color:var(--warm);font-size:11px;letter-spacing:2px;text-transform:uppercase;}
+.empty-state{text-align:center;padding:60px 0;color:rgba(255,255,255,0.4);font-size:13px;letter-spacing:1px;}
+.loading-state{text-align:center;padding:40px 0;color:rgba(255,255,255,0.3);font-size:11px;letter-spacing:2px;text-transform:uppercase;}
 
 /* MILESTONES */
 .milestone-section{max-width:720px;margin:0 auto;padding:44px 28px 60px;background:rgba(253,246,238,0.88);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);}
@@ -254,7 +254,7 @@ footer{background:rgba(5,3,3,0.6);backdrop-filter:blur(12px);-webkit-backdrop-fi
   .avatar-name{font-size:22px;}
   .avatar-birthday{font-size:13px;}
   .video-grid{grid-template-columns:1fr;}
-  .gallery-grid{column-count:2;}
+  .gallery-grid{column-count:2;column-width:auto;}
   .profile-tabs .tab-btn{padding:12px 16px;font-size:9px;letter-spacing:1px;}
   .milestone-card{padding:14px 16px 14px 20px;}
 }
