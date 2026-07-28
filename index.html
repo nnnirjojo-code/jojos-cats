@@ -202,7 +202,7 @@ body.is-owner .comment-delete{display:inline-block;}
 .comment-delete:hover{color:#c0392b;}
 
 /* VIDEO */
-.video-section{max-width:900px;margin:0 auto;padding:44px 28px 70px;background:rgba(253,246,238,0.88);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);}
+.video-section{width:100%;padding:44px 24px 70px;}
 .video-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:24px;}
 .video-card{border:0.5px solid var(--border);background:var(--light);overflow:hidden;}
 .video-thumb{position:relative;aspect-ratio:16/9;background:var(--dark);}
@@ -210,10 +210,10 @@ body.is-owner .comment-delete{display:inline-block;}
 .video-meta{padding:16px 20px;}
 .video-cat-tag{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:5px;}
 .video-title{font-family:'Playfair Display',serif;font-size:17px;color:var(--dark);}
-.video-drop-zone{border:1.5px dashed var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:220px;padding:30px;transition:all 0.2s;position:relative;cursor:pointer;}
-.video-drop-zone.dragover{border-color:var(--gold);background:rgba(193,127,59,0.05);}
-.video-drop-zone p{font-size:13px;color:var(--warm);letter-spacing:1px;margin-top:12px;margin-bottom:6px;}
-.video-drop-zone span{font-size:10px;color:var(--border);letter-spacing:2px;text-transform:uppercase;}
+.video-drop-zone{border:1.5px dashed rgba(255,255,255,0.15);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:220px;padding:30px;transition:all 0.2s;position:relative;cursor:pointer;}
+.video-drop-zone.dragover{border-color:var(--orange);background:rgba(232,149,74,0.08);}
+.video-drop-zone p{font-size:13px;color:rgba(255,255,255,0.4);letter-spacing:1px;margin-top:12px;margin-bottom:6px;}
+.video-drop-zone span{font-size:10px;color:rgba(255,255,255,0.2);letter-spacing:2px;text-transform:uppercase;}
 .video-drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
 .play-icon{width:44px;height:44px;border:1.5px solid var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;pointer-events:none;}
 .play-icon::after{content:'';border-left:13px solid var(--gold);border-top:8px solid transparent;border-bottom:8px solid transparent;margin-left:4px;}
@@ -707,6 +707,7 @@ function showPage(name){
   window.scrollTo(0,0);
   if(name==='gallery')loadMainGallery();
   if(name==='comments')loadComments();
+  if(name==='videos')loadVideos();
   if(name==='home')loadCatAvatars();
 }
 
@@ -1126,13 +1127,41 @@ async function deleteComment(id){
 }
 
 function addVideo(e){const f=e.target.files[0];if(f)addVideoFile(f);}
-function addVideoFile(file){
-  const url=URL.createObjectURL(file);
+async function addVideoFile(file){
+  // 上传到 Supabase
+  const path='videos/'+Date.now()+'-'+file.name.replace(/\s/g,'_');
+  let url;
+  try{
+    url=await storageUpload(file,path);
+  }catch(e){
+    showToast(lang==='zh'?'视频上传失败':'Upload failed');
+    return;
+  }
+  // 保存到 localStorage
+  const videos=JSON.parse(localStorage.getItem('jojos_videos')||'[]');
+  videos.push({url,name:file.name.replace(/\.[^.]+$/,''),time:Date.now()});
+  localStorage.setItem('jojos_videos',JSON.stringify(videos));
+  loadVideos();
+  showToast(lang==='zh'?'视频已上传！':'Video uploaded!');
+}
+
+function loadVideos(){
   const grid=document.getElementById('video-grid');
-  const card=document.createElement('div');
-  card.className='video-card';
-  card.innerHTML='<div class="video-thumb"><video src="'+url+'" controls style="width:100%;height:100%;display:block;"></video></div><div class="video-meta"><p class="video-cat-tag">jojo\'s cats</p><p class="video-title">'+file.name.replace(/\.[^.]+$/,'')+'</p></div>';
-  grid.insertBefore(card,grid.querySelector('.video-drop-zone'));
+  if(!grid)return;
+  const videos=JSON.parse(localStorage.getItem('jojos_videos')||'[]');
+  const dropZone=grid.querySelector('.video-drop-zone');
+  grid.innerHTML='';
+  if(dropZone)grid.appendChild(dropZone);
+  if(!videos.length){
+    // drop zone already there
+    return;
+  }
+  videos.slice().reverse().forEach(v=>{
+    const card=document.createElement('div');
+    card.className='video-card';
+    card.innerHTML='<div class="video-thumb"><video src="'+v.url+'" controls preload="metadata" style="width:100%;height:100%;display:block;"></video></div><div class="video-meta"><p class="video-cat-tag">jojo\'s cats</p><p class="video-title">'+v.name+'</p></div>';
+    grid.insertBefore(card,dropZone||grid.firstChild);
+  });
 }
 
 function openLightbox(photo){
