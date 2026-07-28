@@ -110,6 +110,10 @@ body.is-owner .gallery-item:hover .delete-btn{display:flex;}
 .drop-zone p{font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:6px;}
 .drop-zone span{font-size:10px;color:rgba(255,255,255,0.2);letter-spacing:2px;text-transform:uppercase;}
 .drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.upload-bar-wrap{display:none;margin-top:14px;text-align:center;}
+.upload-bar-track{height:3px;background:rgba(255,255,255,0.1);border-radius:0;overflow:hidden;}
+.upload-bar-fill{height:100%;width:0%;background:var(--orange);transition:width 0.3s ease;}
+.upload-bar-text{font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:1px;margin-top:6px;}
 .upload-progress{margin-top:12px;font-size:11px;color:var(--gold);letter-spacing:1px;display:none;}
 
 /* CAPTION MODAL */
@@ -331,6 +335,7 @@ footer{background:rgba(5,3,3,0.6);backdrop-filter:blur(12px);-webkit-backdrop-fi
         <p data-zh="拖拽照片到这里，或点击上传" data-en="Drag photos here or click to upload">拖拽照片到这里，或点击上传</p>
         <span>JPG · PNG</span>
         <input type="file" accept="image/*" multiple onchange="handlePhotoSelect(event,'talkie')">
+        <div class="upload-bar-wrap" id="talkie-upload-bar"><div class="upload-bar-track"><div class="upload-bar-fill" id="talkie-upload-fill"></div></div><div class="upload-bar-text" id="talkie-upload-text"></div></div>
       </div>
     </section>
   </div>
@@ -404,6 +409,7 @@ footer{background:rgba(5,3,3,0.6);backdrop-filter:blur(12px);-webkit-backdrop-fi
         <p data-zh="拖拽照片到这里，或点击上传" data-en="Drag photos here or click to upload">拖拽照片到这里，或点击上传</p>
         <span>JPG · PNG</span>
         <input type="file" accept="image/*" multiple onchange="handlePhotoSelect(event,'shuciao')">
+        <div class="upload-bar-wrap" id="shuciao-upload-bar"><div class="upload-bar-track"><div class="upload-bar-fill" id="shuciao-upload-fill"></div></div><div class="upload-bar-text" id="shuciao-upload-text"></div></div>
       </div>
     </section>
   </div>
@@ -477,6 +483,7 @@ footer{background:rgba(5,3,3,0.6);backdrop-filter:blur(12px);-webkit-backdrop-fi
         <p data-zh="拖拽照片到这里，或点击上传" data-en="Drag photos here or click to upload">拖拽照片到这里，或点击上传</p>
         <span>JPG · PNG</span>
         <input type="file" accept="image/*" multiple onchange="handlePhotoSelect(event,'tummy')">
+        <div class="upload-bar-wrap" id="tummy-upload-bar"><div class="upload-bar-track"><div class="upload-bar-fill" id="tummy-upload-fill"></div></div><div class="upload-bar-text" id="tummy-upload-text"></div></div>
       </div>
     </section>
   </div>
@@ -783,11 +790,22 @@ let currentFileObj=null;
 async function handlePhotoSelect(e,cat){
   const files=Array.from(e.target.files||e.dataTransfer?.files||[]);
   if(!files.length)return;
-  for(const file of files){
+  const bar=document.getElementById(cat+'-upload-bar');
+  const fill=document.getElementById(cat+'-upload-fill');
+  const txt=document.getElementById(cat+'-upload-text');
+  if(bar)bar.style.display='block';
+  const total=files.length;
+  for(let i=0;i<total;i++){
+    const file=files[i];
     const name=file.name.replace(/\.[^.]+$/,'');
+    const pct=Math.round(((i+1)/total)*100);
+    if(fill)fill.style.width=pct+'%';
+    if(txt)txt.textContent=(lang==='zh'?'正在上传 ':'Uploading ')+(i+1)+'/'+total;
     await uploadOnePhoto(file,cat,name,'');
   }
-  showToast(lang==='zh'?'全部上传完成！':'All uploaded!');
+  if(txt)txt.textContent=(lang==='zh'?'上传完成！':'Done!')+' ✦';
+  if(fill)fill.style.width='100%';
+  setTimeout(()=>{if(bar)bar.style.display='none';},2500);
   loadCatGallery(cat);
 }
 
