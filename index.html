@@ -1143,17 +1143,13 @@ async function addVideoFile(file){
     return;
   }
   const vname=file.name.replace(/\.[^.]+$/,'');
-  // 本地存一份（立即可见）
+  // 本地存一份
   const v=JSON.parse(localStorage.getItem('jojos_videos')||'[]');
   v.push({url,name:vname,time:Date.now()});
   localStorage.setItem('jojos_videos',JSON.stringify(v));
-  // 同时写数据库（跨设备同步用）
+  // 写photos表（有权限，猫名字用_vid_不冲突）
   try{
-    await dbInsert('diary_entries',{
-      cat:'__video__',date:new Date().toISOString().slice(0,10),
-      title_zh:vname,title_en:'',
-      body_zh:url,body_en:''
-    });
+    await dbInsert('photos',{cat:'_vid_',url,caption:vname,description:''});
   }catch(e){}
   loadVideos();
   showToast(lang==='zh'?'视频已上传':'Uploaded');
@@ -1170,13 +1166,13 @@ async function loadVideos(){
   const ls=JSON.parse(localStorage.getItem('jojos_videos')||'[]');
   ls.forEach(v=>all.push(v));
   try{
-    const db=await dbSelect('diary_entries','cat=eq.__video__&limit=50');
+    const db=await dbSelect('photos','cat=eq._vid_&limit=50');
     if(db&&db.length){
       const seen=new Set(all.map(v=>v.url));
       db.forEach(r=>{
-        if(r.body_zh&&!seen.has(r.body_zh)){
-          seen.add(r.body_zh);
-          all.push({url:r.body_zh,name:r.title_zh,time:Date.parse(r.date||0)});
+        if(r.url&&!seen.has(r.url)){
+          seen.add(r.url);
+          all.push({url:r.url,name:r.caption||r.url.split('/').pop(),time:Date.now()});
         }
       });
     }
