@@ -1173,7 +1173,7 @@ function loadVideos(){
       const m=playSrc.match(/\/photos\/(.+)$/);
       if(m)playSrc='https://seemycats.netlify.app/'+m[1];
     }
-    card.innerHTML='<div class="video-thumb"><video src="'+playSrc+'" controls preload="auto" style="width:100%;height:100%;display:block;"></video></div><div class="video-meta"><p class="video-cat-tag">jojo\'s cats</p><p class="video-title">'+(v.caption||v.name||'视频')+'</p><p style="margin-top:6px;font-size:10px;color:var(--warm);letter-spacing:1px;"><a href="'+playSrc+'" download style="color:var(--orange);">📥 下载</a></p></div>';
+    card.innerHTML='<div class="video-thumb"><video src="'+playSrc+'" controls preload="auto" style="width:100%;height:100%;display:block;"></video></div><div class="video-meta"><p class="video-cat-tag">jojo\'s cats</p><p class="video-title">'+(v.caption||v.name||'视频')+'</p><p style="margin-top:6px;font-size:10px;color:var(--warm);letter-spacing:1px;"><a href="'+playSrc+'" download style="color:var(--orange);">📥 下载</a>'+(v.url.includes('supabase')?' · <a href="#" onclick="navigator.clipboard.writeText(\''+v.url+'\');this.textContent=\'已复制\';return false;" style="color:var(--warm);">📋 复制链接</a>':'')+'</p></div>';
     grid.insertBefore(card,dropZone||grid.firstChild);
   });
 }
