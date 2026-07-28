@@ -780,13 +780,15 @@ let pendingCat='';
 let pendingIndex=0;
 let currentFileObj=null;
 
-function handlePhotoSelect(e,cat){
+async function handlePhotoSelect(e,cat){
   const files=Array.from(e.target.files||e.dataTransfer?.files||[]);
   if(!files.length)return;
-  pendingFiles=files;
-  pendingCat=cat;
-  pendingIndex=0;
-  showCaptionModal(pendingFiles[0]);
+  for(const file of files){
+    const name=file.name.replace(/\.[^.]+$/,'');
+    await uploadOnePhoto(file,cat,name,'');
+  }
+  showToast(lang==='zh'?'全部上传完成！':'All uploaded!');
+  loadCatGallery(cat);
 }
 
 function showCaptionModal(file){
