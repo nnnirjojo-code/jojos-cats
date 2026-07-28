@@ -55,20 +55,20 @@ nav{background:rgba(5,3,3,0.85);backdrop-filter:blur(12px);-webkit-backdrop-filt
 .cat-avatar-btn{background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:16px;transition:transform 0.4s cubic-bezier(0.34,1.56,0.64,1);padding:0;animation:fadeUp 0.8s ease both;}
 .cat-avatar-btn:nth-child(2){animation-delay:0.15s;}
 .cat-avatar-btn:nth-child(3){animation-delay:0.3s;}
-.cat-avatar-btn:hover{transform:translateY(-8px) scale(1.02);}
-.avatar-ring{width:220px;height:220px;border-radius:50%;border:2px solid rgba(255,255,255,0.4);overflow:hidden;transition:all 0.4s ease;position:relative;background:var(--gold);}
+.cat-avatar-btn:hover{transform:translateY(-16px) scale(1.02);}
+.avatar-ring{width:660px;height:660px;border-radius:50%;border:6px solid rgba(255,255,255,0.4);overflow:hidden;transition:all 0.4s ease;position:relative;background:var(--gold);}
 .cat-avatar-btn:hover .avatar-ring{border-color:var(--orange);animation:glowPulse 1.5s ease infinite;}
 .avatar-ring img{width:100%;height:100%;object-fit:cover;object-position:center top;filter:sepia(8%) contrast(1.05);transition:transform 0.5s ease;display:block;}
 .avatar-ring img[src=""],.avatar-ring img:not([src]){opacity:0;}
 .cat-avatar-btn:hover .avatar-ring img{transform:scale(1.08);}
 .avatar-overlay{position:absolute;inset:0;border-radius:50%;background:rgba(44,34,24,0);transition:background 0.3s;display:flex;align-items:center;justify-content:center;}
 .cat-avatar-btn:hover .avatar-overlay{background:rgba(44,34,24,0.18);}
-.avatar-overlay span{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--cream);opacity:0;transition:opacity 0.3s;}
+.avatar-overlay span{font-size:22px;letter-spacing:4px;text-transform:uppercase;color:var(--cream);opacity:0;transition:opacity 0.3s;}
 .cat-avatar-btn:hover .avatar-overlay span{opacity:1;}
-.avatar-name{font-family:'Playfair Display','Noto Serif SC',serif;font-size:26px;font-weight:700;color:var(--cream);text-shadow:0 1px 8px rgba(0,0,0,0.5);animation:fadeUp 0.8s ease 0.2s both;}
+.avatar-name{font-family:'Playfair Display','Noto Serif SC',serif;font-size:52px;font-weight:700;color:var(--cream);text-shadow:0 2px 20px rgba(0,0,0,0.5);animation:fadeUp 0.8s ease 0.2s both;}
 .cat-avatar-btn:nth-child(2) .avatar-name{animation-delay:0.35s;}
 .cat-avatar-btn:nth-child(3) .avatar-name{animation-delay:0.5s;}
-.avatar-birthday{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.6);margin-top:-6px;animation:fadeUp 0.8s ease 0.35s both;}
+.avatar-birthday{font-size:18px;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.6);margin-top:-6px;animation:fadeUp 0.8s ease 0.35s both;}
 .cat-avatar-btn:nth-child(2) .avatar-birthday{animation-delay:0.5s;}
 .cat-avatar-btn:nth-child(3) .avatar-birthday{animation-delay:0.65s;}
 
@@ -245,8 +245,9 @@ footer{background:rgba(5,3,3,0.6);backdrop-filter:blur(12px);-webkit-backdrop-fi
 @media(max-width:600px){
   nav{padding:0 16px;}
   .cats-row{gap:28px;}
-  .avatar-ring{width:150px;height:150px;}
-  .avatar-name{font-size:20px;}
+  .avatar-ring{width:min(65vw,320px);height:min(65vw,320px);}
+  .avatar-name{font-size:28px;}
+  .avatar-birthday{font-size:14px;}
   .video-grid{grid-template-columns:1fr;}
   .gallery-grid{column-count:2;}
   .profile-tabs .tab-btn{padding:12px 16px;font-size:9px;letter-spacing:1px;}
