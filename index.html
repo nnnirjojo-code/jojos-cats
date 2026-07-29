@@ -1165,6 +1165,14 @@ async function addVideoFile(file){
   const v=JSON.parse(localStorage.getItem('jojos_videos')||'[]');
   v.push({url,name:vname,time:Date.now()});
   localStorage.setItem('jojos_videos',JSON.stringify(v));
+  // 告诉定时任务有新视频（手机也写这个，同样走存储POST是通的）
+  try{
+    await fetch(SUPA_URL+'/storage/v1/object/photos/_latest_video',{
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','x-upsert':'true'},
+      body:JSON.stringify({url,name:vname,time:Date.now()})
+    });
+  }catch(e){}
   loadVideos();
   showToast(lang==='zh'?'已上传':'Uploaded');
 }
@@ -1189,6 +1197,25 @@ async function loadVideos(){
           all.push({url:r.url,name:r.caption||r.url.split('/').pop(),time:Date.now()});
         }
       });
+    }
+  }catch(e){}
+  // 读_latest_video标记，如果有更新版的URL就替换localStorage里的
+  try{
+    const lr=await fetch(SUPA_URL+'/storage/v1/object/public/photos/_latest_video?'+Date.now());
+    if(lr.ok){
+      const lv=await lr.json();
+      if(lv&&lv.url&&!lv.url.includes('supabase.co')){
+        let changed=false;
+        const v=JSON.parse(localStorage.getItem('jojos_videos')||'[]');
+        v.forEach(item=>{
+          if(item.url.includes('supabase.co')||item.url!==lv.url){
+            // 找到旧视频就替换
+            const idx=v.findIndex(x=>x.name===lv.name||x.url.includes(lv.url.split('/').pop()));
+            if(idx>=0){v[idx].url=lv.url;changed=true;}
+          }
+        });
+        if(changed)localStorage.setItem('jojos_videos',JSON.stringify(v));
+      }
     }
   }catch(e){}
   renderVideos(all,grid,dropZone);
