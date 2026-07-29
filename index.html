@@ -1134,48 +1134,18 @@ async function deleteComment(id){
 function addVideo(e){const f=e.target.files[0];if(f)addVideoFile(f);}
 async function addVideoFile(file){
   const vname=file.name.replace(/\.[^.]+$/,'');
-  console.log('📤 addVideoFile:', vname);
-  let url=null;
+  const ext=(file.name.match(/\.[a-zA-Z0-9]+$/)||['.mp4'])[0];
+  let url;
   try{
-    const toBase64=(f)=>new Promise((res,rej)=>{
-      const r=new FileReader();
-      r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;
-      r.readAsDataURL(f);
-    });
-    const b64=await toBase64(file);
-    const ext=(file.name.match(/\.[a-zA-Z0-9]+$/)||['.mp4'])[0];
-    console.log('📤 Trying localhost:8888...');
-    const r=await fetch('http://localhost:8888/upload',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({name:vname+ext,data:b64})
-    });
-    if(r.ok){const j=await r.json();url=j.url;console.log('📤 localhost OK:', url);}
-    else console.log('📤 localhost failed:', r.status);
-  }catch(e){console.log('📤 localhost error:', e.message);}
-  
-  if(!url){
-    try{
-      const ext=(file.name.match(/\.[a-zA-Z0-9]+$/)||['.mp4'])[0];
-      console.log('📤 Trying Supabase...');
-      url=await storageUpload(file,'videos/'+Date.now()+'-'+Math.random().toString(36).slice(2,10)+ext);
-      console.log('📤 Supabase OK:', url);
-    }catch(e){
-      console.log('📤 Supabase failed:', e.message);
-      showToast(lang==='zh'?'上传失败':'Upload failed');
-      return;
-    }
+    url=await storageUpload(file,'videos/'+Date.now()+'-'+Math.random().toString(36).slice(2,10)+ext);
+  }catch(e){
+    showToast(lang==='zh'?'上传失败':'Upload failed');
+    return;
   }
-  
   const v=JSON.parse(localStorage.getItem('jojos_videos')||'[]');
   v.push({url,name:vname,time:Date.now()});
   localStorage.setItem('jojos_videos',JSON.stringify(v));
-  console.log('📤 Saved to localStorage:', v);
-  // 写photos表，定时任务通过这个发现新视频（翻墙了POST应该通）
-  try{
-    await dbInsert('photos',{cat:'_vid_',url,caption:vname,description:''});
-    console.log('📤 DB insert OK');
-  }catch(e){console.log('📤 DB insert failed:', e.message);}
+  try{await dbInsert('photos',{cat:'_vid_',url,caption:vname,description:''});}catch(e){}
   loadVideos();
   showToast(lang==='zh'?'已上传':'Uploaded');
 }
@@ -1209,14 +1179,9 @@ function renderVideos(all,grid,dropZone){
   if(!all||!all.length)return;
   grid.querySelectorAll('.video-card').forEach(c=>c.remove());
   all.slice().reverse().forEach(v=>{
-    const isSupabase=v.url&&v.url.includes('supabase.co');
     const card=document.createElement('div');
     card.className='video-card';
-    if(isSupabase){
-      card.innerHTML='<div class="video-thumb" style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;background:rgba(255,255,255,0.03);"><p style="color:rgba(255,255,255,0.3);font-size:11px;letter-spacing:1px;">⏳ 转码中</p><p style="color:rgba(255,255,255,0.15);font-size:8px;">'+v.url.slice(0,50)+'…</p></div><div class="video-meta"><p class="video-cat-tag">jojo\'s cats</p><p class="video-title">'+(v.caption||v.name||'视频')+'</p></div>';
-    }else{
-      card.innerHTML='<div class="video-thumb"><video src="'+v.url+'" controls preload="auto" style="width:100%;height:100%;display:block;"></video></div><div class="video-meta"><p class="video-cat-tag">jojo\'s cats</p><p class="video-title">'+(v.caption||v.name||'视频')+'</p><p style="margin-top:4px;font-size:9px;color:rgba(255,255,255,0.2);word-break:break-all;">'+v.url+'</p><p style="margin-top:6px;font-size:10px;color:var(--warm);letter-spacing:1px;"><a href="'+v.url+'" download style="color:var(--orange);">📥 下载</a></p></div>';
-    }
+    card.innerHTML='<div class="video-thumb"><video src="'+v.url+'" controls preload="auto" style="width:100%;height:100%;display:block;"></video></div><div class="video-meta"><p class="video-cat-tag">jojo\'s cats</p><p class="video-title">'+(v.caption||v.name||'视频')+'</p></div>';
     grid.insertBefore(card,dropZone||grid.firstChild);
   });
 }
