@@ -1179,9 +1179,14 @@ function renderVideos(all,grid,dropZone){
   if(!all||!all.length)return;
   grid.querySelectorAll('.video-card').forEach(c=>c.remove());
   all.slice().reverse().forEach(v=>{
+    const isSupabase=v.url&&v.url.includes('supabase.co');
     const card=document.createElement('div');
     card.className='video-card';
-    card.innerHTML='<div class="video-thumb"><video src="'+v.url+'" controls preload="auto" style="width:100%;height:100%;display:block;"></video></div><div class="video-meta"><p class="video-cat-tag">jojo\'s cats</p><p class="video-title">'+(v.caption||v.name||'视频')+'</p></div>';
+    if(isSupabase){
+      card.innerHTML='<div class="video-thumb" style="display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.03);"><p style="color:rgba(255,255,255,0.3);font-size:11px;letter-spacing:1px;">⏳ 转码中…</p></div><div class="video-meta"><p class="video-cat-tag">jojo\'s cats</p><p class="video-title">'+(v.caption||v.name||'视频')+'</p></div>';
+    }else{
+      card.innerHTML='<div class="video-thumb"><video src="'+v.url+'" controls preload="auto" style="width:100%;height:100%;display:block;"></video></div><div class="video-meta"><p class="video-cat-tag">jojo\'s cats</p><p class="video-title">'+(v.caption||v.name||'视频')+'</p></div>';
+    }
     grid.insertBefore(card,dropZone||grid.firstChild);
   });
 }
