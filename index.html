@@ -1133,28 +1133,38 @@ async function deleteComment(id){
 
 function addVideo(e){const f=e.target.files[0];if(f)addVideoFile(f);}
 async function addVideoFile(file){
-  const ext=(file.name.match(/\.[a-zA-Z0-9]+$/)||['.mp4'])[0];
-  const path='videos/'+Date.now()+'-'+Math.random().toString(36).slice(2,10)+ext;
-  let url;
-  try{
-    url=await storageUpload(file,path);
-  }catch(e){
-    showToast(lang==='zh'?'上传失败':'Upload failed');
-    return;
-  }
   const vname=file.name.replace(/\.[^.]+$/,'');
-  // 存localStorage
+  // 优先走本地中转（同一台电脑，不经过墙）
+  let url=null;
+  try{
+    const toBase64=(f)=>new Promise((res,rej)=>{
+      const r=new FileReader();
+      r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;
+      r.readAsDataURL(f);
+    });
+    const b64=await toBase64(file);
+    const ext=(file.name.match(/\.[a-zA-Z0-9]+$/)||['.mp4'])[0];
+    const r=await fetch('http://localhost:8888/upload',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name:vname+ext,data:b64})
+    });
+    if(r.ok){const j=await r.json();url=j.url;}
+  }catch(e){/* 本地不通就试Supabase */}
+  
+  if(!url){
+    try{
+      const ext=(file.name.match(/\.[a-zA-Z0-9]+$/)||['.mp4'])[0];
+      url=await storageUpload(file,'videos/'+Date.now()+'-'+Math.random().toString(36).slice(2,10)+ext);
+    }catch(e){
+      showToast(lang==='zh'?'上传失败':'Upload failed');
+      return;
+    }
+  }
+  
   const v=JSON.parse(localStorage.getItem('jojos_videos')||'[]');
   v.push({url,name:vname,time:Date.now()});
   localStorage.setItem('jojos_videos',JSON.stringify(v));
-  // 写_latest_video到存储桶（定时任务读这个去同步）
-  try{
-    await fetch(SUPA_URL+'/storage/v1/object/photos/_latest_video',{
-      method:'POST',
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','x-upsert':'true'},
-      body:JSON.stringify({url,name:vname,time:Date.now()})
-    });
-  }catch(e){}
   loadVideos();
   showToast(lang==='zh'?'已上传':'Uploaded');
 }
