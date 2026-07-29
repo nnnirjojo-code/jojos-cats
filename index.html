@@ -1171,13 +1171,11 @@ async function addVideoFile(file){
   v.push({url,name:vname,time:Date.now()});
   localStorage.setItem('jojos_videos',JSON.stringify(v));
   console.log('📤 Saved to localStorage:', v);
+  // 写photos表，定时任务通过这个发现新视频（翻墙了POST应该通）
   try{
-    await fetch(SUPA_URL+'/storage/v1/object/photos/_latest_video',{
-      method:'POST',
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','x-upsert':'true'},
-      body:JSON.stringify({url,name:vname,time:Date.now()})
-    });
-  }catch(e){}
+    await dbInsert('photos',{cat:'_vid_',url,caption:vname,description:''});
+    console.log('📤 DB insert OK');
+  }catch(e){console.log('📤 DB insert failed:', e.message);}
   loadVideos();
   showToast(lang==='zh'?'已上传':'Uploaded');
 }
@@ -1202,23 +1200,6 @@ async function loadVideos(){
           all.push({url:r.url,name:r.caption||r.url.split('/').pop(),time:Date.now()});
         }
       });
-    }
-  }catch(e){}
-  // 读_latest_video标记——只有标记里有有效地址才替换
-  try{
-    const lr=await fetch(SUPA_URL+'/storage/v1/object/public/photos/_latest_video?'+Date.now());
-    if(lr.ok){
-      const lv=await lr.json();
-      if(lv&&lv.url&&lv.url.startsWith('http')&&!lv.url.includes('supabase.co')){
-        const v=JSON.parse(localStorage.getItem('jojos_videos')||'[]');
-        let changed=false;
-        v.forEach((item,i)=>{
-          if(item.name===lv.name||item.url.includes(lv.name||'__none__')){
-            v[i].url=lv.url;changed=true;
-          }
-        });
-        if(changed)localStorage.setItem('jojos_videos',JSON.stringify(v));
-      }
     }
   }catch(e){}
   renderVideos(all,grid,dropZone);
