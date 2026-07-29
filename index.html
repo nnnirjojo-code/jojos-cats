@@ -569,8 +569,6 @@ footer{background:rgba(5,3,3,0.6);backdrop-filter:blur(12px);-webkit-backdrop-fi
   <section class="comments-section" style="padding-top:44px;">
     <div class="comment-form">
       <label data-zh="你的名字" data-en="Your name">你的名字</label><input type="text" id="c-name" placeholder="叫我...">
-      <label data-zh="喜欢哪只猫？" data-en="Favourite cat?">喜欢哪只猫？</label>
-      <select id="c-cat"><option value="">都喜欢 / All of them</option><option value="talkie">Talkie</option><option value="shuciao">薯条 / French Fry</option><option value="tummy">Tummy</option></select>
       <label data-zh="留言" data-en="Message">留言</label><textarea id="c-msg" placeholder="写下你想说的…"></textarea>
       <div class="comment-form-actions"><button class="btn-save" onclick="submitComment()" data-zh="发送留言" data-en="Send">发送留言</button></div>
     </div>
@@ -1116,7 +1114,6 @@ function makeComment(c){
   const catNames={talkie:'Talkie',shuciao:'薯条',tummy:'Tummy'};
   const time=new Date(c.created_at).toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'});
   div.innerHTML='<div class="comment-name">'+(c.name||'匿名')+'</div>'+
-    (c.cat?'<span class="comment-cat-tag">❤ '+(catNames[c.cat]||c.cat)+'</span>':'')+
     '<p class="comment-msg">'+c.message+'</p>'+
     '<div class="comment-time">'+time+'</div>'+
     '<button class="comment-delete" onclick="deleteComment('+c.id+')">× '+(lang==='zh'?'删除':'Delete')+'</button>';
@@ -1144,12 +1141,10 @@ async function loadComments(){
 async function submitComment(){
   const name=document.getElementById('c-name').value.trim();
   const message=document.getElementById('c-msg').value.trim();
-  const cat=document.getElementById('c-cat').value;
   if(!message)return;
-  await dbInsert('comments',{name:name||'匿名',message,cat:cat||null});
+  await dbInsert('comments',{name:name||'匿名',message});
   document.getElementById('c-name').value='';
   document.getElementById('c-msg').value='';
-  document.getElementById('c-cat').value='';
   showToast(lang==='zh'?'留言成功！':'Comment sent!');
   loadComments();
 }
