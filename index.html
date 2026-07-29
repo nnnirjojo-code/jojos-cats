@@ -1134,7 +1134,7 @@ async function deleteComment(id){
 function addVideo(e){const f=e.target.files[0];if(f)addVideoFile(f);}
 async function addVideoFile(file){
   const vname=file.name.replace(/\.[^.]+$/,'');
-  // 优先走本地中转（同一台电脑，不经过墙）
+  console.log('📤 addVideoFile:', vname);
   let url=null;
   try{
     const toBase64=(f)=>new Promise((res,rej)=>{
@@ -1144,19 +1144,24 @@ async function addVideoFile(file){
     });
     const b64=await toBase64(file);
     const ext=(file.name.match(/\.[a-zA-Z0-9]+$/)||['.mp4'])[0];
+    console.log('📤 Trying localhost:8888...');
     const r=await fetch('http://localhost:8888/upload',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({name:vname+ext,data:b64})
     });
-    if(r.ok){const j=await r.json();url=j.url;}
-  }catch(e){/* 本地不通就试Supabase */}
+    if(r.ok){const j=await r.json();url=j.url;console.log('📤 localhost OK:', url);}
+    else console.log('📤 localhost failed:', r.status);
+  }catch(e){console.log('📤 localhost error:', e.message);}
   
   if(!url){
     try{
       const ext=(file.name.match(/\.[a-zA-Z0-9]+$/)||['.mp4'])[0];
+      console.log('📤 Trying Supabase...');
       url=await storageUpload(file,'videos/'+Date.now()+'-'+Math.random().toString(36).slice(2,10)+ext);
+      console.log('📤 Supabase OK:', url);
     }catch(e){
+      console.log('📤 Supabase failed:', e.message);
       showToast(lang==='zh'?'上传失败':'Upload failed');
       return;
     }
@@ -1165,7 +1170,7 @@ async function addVideoFile(file){
   const v=JSON.parse(localStorage.getItem('jojos_videos')||'[]');
   v.push({url,name:vname,time:Date.now()});
   localStorage.setItem('jojos_videos',JSON.stringify(v));
-  // 告诉定时任务有新视频（手机也写这个，同样走存储POST是通的）
+  console.log('📤 Saved to localStorage:', v);
   try{
     await fetch(SUPA_URL+'/storage/v1/object/photos/_latest_video',{
       method:'POST',
