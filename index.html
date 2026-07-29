@@ -1199,19 +1199,17 @@ async function loadVideos(){
       });
     }
   }catch(e){}
-  // 读_latest_video标记，如果有更新版的URL就替换localStorage里的
+  // 读_latest_video标记——只有标记里有有效地址才替换
   try{
     const lr=await fetch(SUPA_URL+'/storage/v1/object/public/photos/_latest_video?'+Date.now());
     if(lr.ok){
       const lv=await lr.json();
-      if(lv&&lv.url&&!lv.url.includes('supabase.co')){
-        let changed=false;
+      if(lv&&lv.url&&lv.url.startsWith('http')&&!lv.url.includes('supabase.co')){
         const v=JSON.parse(localStorage.getItem('jojos_videos')||'[]');
-        v.forEach(item=>{
-          if(item.url.includes('supabase.co')||item.url!==lv.url){
-            // 找到旧视频就替换
-            const idx=v.findIndex(x=>x.name===lv.name||x.url.includes(lv.url.split('/').pop()));
-            if(idx>=0){v[idx].url=lv.url;changed=true;}
+        let changed=false;
+        v.forEach((item,i)=>{
+          if(item.name===lv.name||item.url.includes(lv.name||'__none__')){
+            v[i].url=lv.url;changed=true;
           }
         });
         if(changed)localStorage.setItem('jojos_videos',JSON.stringify(v));
