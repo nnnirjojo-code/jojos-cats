@@ -669,9 +669,9 @@ async function dbDelete(table,id){
   });
 }
 async function storageUpload(file,path){
-  // 上传不用短超时（大文件视频可能传很久）
+  // 用 supabase 上传（可能被墙，失败不返回假地址）
   const ctl=new AbortController();
-  const timer=setTimeout(()=>ctl.abort(),120000); // 2分钟超时
+  const timer=setTimeout(()=>ctl.abort(),30000);
   try{
     const r=await fetch(SUPA_URL+'/storage/v1/object/photos/'+path,{
       method:'POST',
@@ -679,6 +679,7 @@ async function storageUpload(file,path){
       body:file,
       signal:ctl.signal
     });
+    if(!r.ok)throw new Error('Upload failed: '+r.status);
     return SUPA_URL+'/storage/v1/object/public/photos/'+path;
   }finally{clearTimeout(timer);}
 }
