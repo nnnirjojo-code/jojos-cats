@@ -669,9 +669,8 @@ async function dbDelete(table,id){
   });
 }
 async function storageUpload(file,path){
-  // 用 supabase 上传（可能被墙，失败不返回假地址）
   const ctl=new AbortController();
-  const timer=setTimeout(()=>ctl.abort(),30000);
+  const timer=setTimeout(()=>ctl.abort(),120000); // 国内网络慢，给足2分钟
   try{
     const r=await fetch(SUPA_URL+'/storage/v1/object/photos/'+path,{
       method:'POST',
@@ -1193,10 +1192,8 @@ function renderVideos(all,grid,dropZone){
     const card=document.createElement('div');
     card.className='video-card';
     if(isSupabase){
-      // 还没转码的，显示等待提示
-      card.innerHTML='<div class="video-thumb" style="display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.03);"><p style="color:rgba(255,255,255,0.3);font-size:11px;letter-spacing:1px;">⏳ 转码中…</p></div><div class="video-meta"><p class="video-cat-tag">jojo\'s cats</p><p class="video-title">'+(v.caption||v.name||'视频')+'</p></div>';
+      card.innerHTML='<div class="video-thumb" style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;background:rgba(255,255,255,0.03);"><p style="color:rgba(255,255,255,0.3);font-size:11px;letter-spacing:1px;">⏳ 转码中</p><p style="color:rgba(255,255,255,0.15);font-size:8px;">'+v.url.slice(0,50)+'…</p></div><div class="video-meta"><p class="video-cat-tag">jojo\'s cats</p><p class="video-title">'+(v.caption||v.name||'视频')+'</p></div>';
     }else{
-      // 已转码的可以直接播放
       card.innerHTML='<div class="video-thumb"><video src="'+v.url+'" controls preload="auto" style="width:100%;height:100%;display:block;"></video></div><div class="video-meta"><p class="video-cat-tag">jojo\'s cats</p><p class="video-title">'+(v.caption||v.name||'视频')+'</p><p style="margin-top:6px;font-size:10px;color:var(--warm);letter-spacing:1px;"><a href="'+v.url+'" download style="color:var(--orange);">📥 下载</a></p></div>';
     }
     grid.insertBefore(card,dropZone||grid.firstChild);
