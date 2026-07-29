@@ -102,7 +102,9 @@ nav{background:rgba(5,3,3,0.85);backdrop-filter:blur(12px);-webkit-backdrop-filt
 .gallery-item:hover .gallery-caption{opacity:1;}
 .gallery-caption .cap-desc{font-size:12px;margin-top:3px;opacity:0.8;font-style:italic;}
 .gallery-item .delete-btn{position:absolute;top:8px;right:8px;background:rgba(44,34,24,0.7);border:none;color:var(--cream);width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:13px;display:none;align-items:center;justify-content:center;}
-body.is-owner .gallery-item:hover .delete-btn{display:flex;}
+.gallery-item .edit-btn{position:absolute;top:8px;right:38px;background:rgba(44,34,24,0.7);border:none;color:var(--cream);width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:12px;display:none;align-items:center;justify-content:center;line-height:1;}
+body.is-owner .gallery-item:hover .delete-btn,
+body.is-owner .gallery-item:hover .edit-btn{display:flex;}
 
 /* DROP ZONE */
 .drop-zone{border:1.5px dashed rgba(255,255,255,0.15);padding:40px 20px;text-align:center;margin:24px 4px 0;transition:all 0.2s;cursor:pointer;position:relative;}
@@ -206,7 +208,9 @@ body.is-owner .comment-delete{display:inline-block;}
 .video-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:24px;}
 .video-card{border:0.5px solid var(--border);background:var(--light);overflow:hidden;position:relative;}
 .video-card .delete-btn{position:absolute;top:8px;right:8px;background:rgba(44,34,24,0.7);border:none;color:var(--cream);width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:13px;display:none;align-items:center;justify-content:center;z-index:2;}
-body.is-owner .video-card:hover .delete-btn{display:flex;}
+.video-card .edit-btn{position:absolute;top:8px;right:38px;background:rgba(44,34,24,0.7);border:none;color:var(--cream);width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:12px;display:none;align-items:center;justify-content:center;z-index:2;line-height:1;}
+body.is-owner .video-card:hover .delete-btn,
+body.is-owner .video-card:hover .edit-btn{display:flex;}
 .video-thumb{position:relative;aspect-ratio:16/9;background:var(--dark);}
 .video-thumb video{width:100%;height:100%;object-fit:cover;display:block;}
 .video-meta{padding:16px 20px;}
@@ -612,6 +616,20 @@ footer{background:rgba(5,3,3,0.6);backdrop-filter:blur(12px);-webkit-backdrop-fi
   </div>
 </div>
 
+<!-- EDIT MODAL -->
+<div class="caption-modal" id="edit-modal">
+  <div class="caption-box">
+    <h3 id="edit-modal-title" data-zh="编辑名称" data-en="Edit name">编辑名称</h3>
+    <p id="edit-modal-sub" data-zh="修改照片或视频的名称" data-en="Edit photo or video name">修改照片或视频的名称</p>
+    <input type="text" id="edit-input" placeholder="">
+    <textarea id="edit-textarea" placeholder="" style="display:none;min-height:60px;"></textarea>
+    <div class="caption-actions">
+      <button class="btn-secondary" onclick="closeEditModal()" data-zh="取消" data-en="Cancel">取消</button>
+      <button class="btn-primary" onclick="confirmEdit()" data-zh="保存" data-en="Save">保存</button>
+    </div>
+  </div>
+</div>
+
 <!-- PASSWORD MODAL -->
 <div class="pw-modal" id="pw-modal">
   <div class="pw-box">
@@ -663,6 +681,13 @@ async function dbInsert(table,data){
     body:JSON.stringify(data)
   });
   return r.json();
+}
+async function dbUpdate(table,id,data){
+  await dbFetch(SUPA_URL+'/rest/v1/'+table+'?id=eq.'+id,{
+    method:'PATCH',
+    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify(data)
+  });
 }
 async function dbDelete(table,id){
   await dbFetch(SUPA_URL+'/rest/v1/'+table+'?id=eq.'+id,{
@@ -748,8 +773,10 @@ function makeGalleryItem(photo){
   div.className='gallery-item';
   div.dataset.cat=photo.cat;
   div.dataset.id=photo.id;
+  div.dataset.caption=photo.caption||'';
+  div.dataset.desc=photo.description||'';
   const capHtml='<div class="gallery-caption"><div>'+photo.caption+'</div>'+(photo.description?'<div class="cap-desc">'+photo.description+'</div>':'')+'</div>';
-  div.innerHTML='<img src="'+photo.url+'" alt="'+photo.caption+'" loading="lazy">'+capHtml+'<button class="delete-btn" onclick="deletePhoto(event,'+photo.id+',\''+photo.url+'\')">×</button>';
+  div.innerHTML='<img src="'+photo.url+'" alt="'+photo.caption+'" loading="lazy">'+capHtml+'<button class="edit-btn" onclick="editPhoto(event,this)">✏️</button><button class="delete-btn" onclick="deletePhoto(event,'+photo.id+',\''+photo.url+'\')">×</button>';
   div.querySelector('img').onclick=()=>openLightbox(photo);
   return div;
 }
@@ -1172,6 +1199,68 @@ async function deleteVideo(e,url,id){
   showToast(lang==='zh'?'已删除':'Deleted');
 }
 
+// 编辑状态
+let editTarget=null; // {type:'photo'|'video', id, caption?, description?}
+
+function editPhoto(e,btn){
+  e.stopPropagation();
+  const item=btn.closest('.gallery-item');
+  editTarget={type:'photo',id:parseInt(item.dataset.id),caption:item.dataset.caption||'',description:item.dataset.desc||''};
+  document.getElementById('edit-modal-title').textContent=lang==='zh'?'编辑照片':'Edit Photo';
+  document.getElementById('edit-modal-sub').textContent=lang==='zh'?'修改照片标题和描述':'Edit photo title and description';
+  document.getElementById('edit-input').value=editTarget.caption;
+  document.getElementById('edit-input').placeholder=lang==='zh'?'照片标题':'Photo title';
+  document.getElementById('edit-textarea').style.display='block';
+  document.getElementById('edit-textarea').value=editTarget.description;
+  document.getElementById('edit-textarea').placeholder=lang==='zh'?'描述（可不填）':'Description (optional)';
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+function editVideo(e,btn){
+  e.stopPropagation();
+  const card=btn.closest('.video-card');
+  const id=card.dataset.id?parseInt(card.dataset.id):null;
+  const title=card.dataset.title||'';
+  editTarget={type:'video',id,title,url:card.dataset.url||''};
+  document.getElementById('edit-modal-title').textContent=lang==='zh'?'编辑视频名称':'Edit Video Name';
+  document.getElementById('edit-modal-sub').textContent=lang==='zh'?'修改视频标题':'Edit video title';
+  document.getElementById('edit-input').value=editTarget.title;
+  document.getElementById('edit-input').placeholder=lang==='zh'?'视频标题':'Video title';
+  document.getElementById('edit-textarea').style.display='none';
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+function closeEditModal(){
+  document.getElementById('edit-modal').classList.remove('open');
+  editTarget=null;
+}
+
+async function confirmEdit(){
+  if(!editTarget)return;
+  const val=document.getElementById('edit-input').value.trim();
+  if(!val){showToast(lang==='zh'?'名称不能为空':'Name cannot be empty');return;}
+  if(editTarget.type==='photo'){
+    const desc=document.getElementById('edit-textarea').value.trim();
+    await dbUpdate('photos',editTarget.id,{caption:val,description:desc});
+    // 刷新当前页面
+    const activePage=document.querySelector('.page.active');
+    const cat=activePage?.id?.replace('page-','');
+    if(cat==='gallery')loadMainGallery();
+    else if(cat&&['talkie','shuciao','tummy'].includes(cat))loadCatGallery(cat);
+  }else if(editTarget.type==='video'){
+    if(editTarget.id)await dbUpdate('photos',editTarget.id,{caption:val});
+    // 也从localStorage更新
+    let ls=JSON.parse(localStorage.getItem('jojos_videos')||'[]');
+    if(editTarget.url){
+      const idx=ls.findIndex(x=>x.url===editTarget.url);
+      if(idx>=0){ls[idx].name=val;localStorage.setItem('jojos_videos',JSON.stringify(ls));}
+    }
+    loadVideos();
+  }
+  closeEditModal();
+  showToast(lang==='zh'?'已保存':'Saved');
+}
+
 async function loadVideos(){
   const grid=document.getElementById('video-grid');
   if(!grid)return;
@@ -1204,12 +1293,15 @@ function renderVideos(all,grid,dropZone){
     const isSupabase=v.url&&v.url.includes('supabase.co');
     const card=document.createElement('div');
     card.className='video-card';
+    card.dataset.id=v.id||'';
+    card.dataset.title=v.caption||v.name||'视频';
+    card.dataset.url=v.url||'';
     if(isSupabase){
       card.innerHTML='<div class="video-thumb" style="display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.03);"><p style="color:rgba(255,255,255,0.3);font-size:11px;letter-spacing:1px;">⏳ 转码中…</p></div><div class="video-meta"><p class="video-cat-tag">jojo\'s cats</p><p class="video-title">'+(v.caption||v.name||'视频')+'</p></div>';
     }else{
       card.innerHTML='<div class="video-thumb"><video src="'+v.url+'" controls preload="auto" style="width:100%;height:100%;display:block;"></video></div><div class="video-meta"><p class="video-cat-tag">jojo\'s cats</p><p class="video-title">'+(v.caption||v.name||'视频')+'</p></div>';
     }
-    card.innerHTML+='<button class="delete-btn" onclick="deleteVideo(event,\''+v.url+'\','+(v.id||'null')+')">×</button>';
+    card.innerHTML+='<button class="edit-btn" onclick="editVideo(event,this)">✏️</button><button class="delete-btn" onclick="deleteVideo(event,\''+v.url+'\','+(v.id||'null')+')">×</button>';
     grid.insertBefore(card,dropZone||grid.firstChild);
   });
 }
