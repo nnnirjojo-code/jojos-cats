@@ -797,6 +797,20 @@ async function loadMainGallery(){
   const grid=document.getElementById('main-gallery-grid');
   if(!grid)return;
   grid.innerHTML='<div class="loading-state">加载中…</div>';
+  // 先试GitHub Pages上的缓存（国内可访问，快）
+  try{
+    const cr=await fetch('photos.json?t='+Date.now());
+    if(cr.ok){
+      const cache=await cr.json();
+      const photos=(cache.photos||[]).filter(p=>p.url);
+      if(photos.length){
+        grid.innerHTML='';
+        photos.forEach(p=>grid.appendChild(makeGalleryItem(p)));
+        return;
+      }
+    }
+  }catch(e){}
+  // 缓存失败再连Supabase
   try{
     const photos=await dbSelect('photos');
     grid.innerHTML='';
@@ -1262,22 +1276,42 @@ async function loadVideos(){
   const dropZone=grid.querySelector('.video-drop-zone');
   grid.innerHTML='';
   if(dropZone)grid.appendChild(dropZone);
-  // 合并localStorage（本地） + 数据库（跨设备）
+  // 合并localStorage（本地） + 缓存/数据库（跨设备）
   let all=[];
   const ls=JSON.parse(localStorage.getItem('jojos_videos')||'[]');
   ls.forEach(v=>all.push(v));
+  let fromCache=false;
   try{
-    const db=await dbSelect('photos','cat=eq._vid_&limit=50');
-    if(db&&db.length){
-      const seen=new Set(all.map(v=>v.url));
-      db.forEach(r=>{
-        if(r.url&&!seen.has(r.url)){
-          seen.add(r.url);
-          all.push({url:r.url,name:r.caption||r.url.split('/').pop(),time:Date.now(),id:r.id});
-        }
-      });
+    const cr=await fetch('photos.json?t='+Date.now());
+    if(cr.ok){
+      const cache=await cr.json();
+      const db=(cache.videos||[]).filter(r=>r.url);
+      if(db.length){
+        const seen=new Set(all.map(v=>v.url));
+        db.forEach(r=>{
+          if(r.url&&!seen.has(r.url)){
+            seen.add(r.url);
+            all.push({url:r.url,name:r.caption||r.url.split('/').pop(),time:Date.now(),id:r.id});
+          }
+        });
+        fromCache=true;
+      }
     }
   }catch(e){}
+  if(!fromCache){
+    try{
+      const db=await dbSelect('photos','cat=eq._vid_&limit=50');
+      if(db&&db.length){
+        const seen=new Set(all.map(v=>v.url));
+        db.forEach(r=>{
+          if(r.url&&!seen.has(r.url)){
+            seen.add(r.url);
+            all.push({url:r.url,name:r.caption||r.url.split('/').pop(),time:Date.now(),id:r.id});
+          }
+        });
+      }
+    }catch(e){}
+  }
   renderVideos(all,grid,dropZone);
 }
 
